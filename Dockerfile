@@ -1,6 +1,6 @@
 FROM maven:3.9.16-eclipse-temurin-25-noble AS build
 WORKDIR /workspace
-COPY pom.xml ./
+COPY pom.xml checkstyle.xml ./
 RUN mvn -B dependency:go-offline
 COPY src ./src
 RUN mvn -B package
