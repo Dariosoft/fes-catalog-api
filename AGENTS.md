@@ -19,6 +19,7 @@ Persiste únicamente en la base `catalog`, usa Flyway para el esquema, RabbitMQ 
 
 ## Reglas
 - Lee la skill `/java-springboot` y la spec activa, si existe, antes de tocar código.
+- Usa `/clean-architecture` al diseñar o modificar capas, límites, dependencias, casos de uso o adaptadores.
 - Este servicio es la fuente de verdad de productos, precios actuales y stock inicial.
 - Nunca leas ni escribas tablas de `orders`, `payments` o `panel`; integra mediante contratos HTTP o eventos.
 - Conserva `/catalog`, las variables de entorno, los health checks y las métricas usadas por Kubernetes.
@@ -28,6 +29,7 @@ Persiste únicamente en la base `catalog`, usa Flyway para el esquema, RabbitMQ 
 - Los manifiestos y secretos pertenecen a `infra`; coordina allí cualquier cambio de puerto, ruta o configuración.
 
 ## Al terminar cualquier tarea
+- Tras cambios no triviales de código de producción, aplica `/clean-code-guard` antes de finalizar.
 - Ejecuta `./mvnw verify`; incluye Checkstyle y los tests.
 - Añade o actualiza tests y migraciones cuando cambie comportamiento o esquema.
 - Comprueba que no se hayan roto `/catalog` ni los endpoints de Actuator.
