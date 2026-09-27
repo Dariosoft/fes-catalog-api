@@ -1,3 +1,17 @@
+FROM maven:3.9.16-eclipse-temurin-25-noble AS dev
+WORKDIR /workspace
+COPY pom.xml checkstyle.xml ./
+COPY src ./src
+ENV MAVEN_ARGS=-Dmaven.repo.local=/opt/m2
+RUN mvn -B -DskipTests package \
+    && rm -rf src target \
+    && groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app \
+    && chown -R 10001:10001 /opt/m2 /workspace /home/app
+USER 10001:10001
+ENV HOME=/home/app
+WORKDIR /workspace
+
 FROM maven:3.9.16-eclipse-temurin-25-noble AS build
 WORKDIR /workspace
 COPY pom.xml checkstyle.xml ./
