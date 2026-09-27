@@ -21,6 +21,7 @@ Persiste únicamente en la base `catalog`, usa Flyway para el esquema, RabbitMQ 
 - Lee la spec activa, si existe, antes de tocar código.
 - Para implementar usa solo `/spring-boot-project-creator` en su opción Layered y `/clean-code-guard`.
 - La opción Layered organiza el paquete `com.friendlyeshop.catalog` en `controller/`, `service/`, `repository/`, `model/`, `model/dto/`, `config/` y `exception/`.
+- Usa `/spring-boot-layered-template` como complemento de la opción Layered cuando una clase no encaje claramente en las carpetas básicas o al decidir si corresponde crear paquetes como `client/`, `http/`, `auth/`, `security/`, `messaging/`, `event/`, `mapper/` o `validation/`.
 - No uses la opción DDD de esa skill ni regeneres el proyecto con Spring Initializr al modificar este servicio.
 - Este servicio es la fuente de verdad de productos, precios actuales y stock inicial.
 - Nunca leas ni escribas tablas de `orders`, `payments` o `panel`; integra mediante contratos HTTP o eventos.
