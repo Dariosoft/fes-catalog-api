@@ -18,8 +18,10 @@ Persiste únicamente en la base `catalog`, usa Flyway para el esquema, RabbitMQ 
 - Crea nuevas migraciones Flyway; no edites migraciones ya aplicadas. Hibernate solo valida el esquema.
 
 ## Reglas
-- Lee la skill `/java-springboot` y la spec activa, si existe, antes de tocar código.
-- Usa `/clean-architecture` al diseñar o modificar capas, límites, dependencias, casos de uso o adaptadores.
+- Lee la spec activa, si existe, antes de tocar código.
+- Para implementar usa solo `/spring-boot-project-creator` en su opción Layered y `/clean-code-guard`.
+- La opción Layered organiza el paquete `com.friendlyeshop.catalog` en `controller/`, `service/`, `repository/`, `model/`, `model/dto/`, `config/` y `exception/`.
+- No uses la opción DDD de esa skill ni regeneres el proyecto con Spring Initializr al modificar este servicio.
 - Este servicio es la fuente de verdad de productos, precios actuales y stock inicial.
 - Nunca leas ni escribas tablas de `orders`, `payments` o `panel`; integra mediante contratos HTTP o eventos.
 - Conserva `/catalog`, las variables de entorno, los health checks y las métricas usadas por Kubernetes.
