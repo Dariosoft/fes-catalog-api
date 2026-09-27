@@ -201,24 +201,6 @@ Example: keep `GoogleOAuthClient`, `TokenExchange`, and `HttpTokenExchange` as s
 
 Inner classes are acceptable only for tiny private implementation details that have no independent responsibility and are not useful to test, name, or document separately.
 
-# UML Relationship Hygiene
-
-Class diagrams should communicate architecture, not reproduce every import or local variable type.
-
-Prefer architecturally meaningful relationships over exhaustive compile-time dependency graphs.
-
-Avoid duplicating transitive relationships when a clearer owner relationship already explains the dependency.
-
-Example: if `GoogleLoginService` depends on `GoogleOAuthClient`, and `GoogleOAuthClient` returns or maps `GoogleProfile`, show `GoogleLoginService --> GoogleOAuthClient` and `GoogleOAuthClient ..> GoogleProfile`; omit `GoogleLoginService ..> GoogleProfile` unless the service owns important rules around that profile type.
-
-For UML diagrams:
-
-- show fields, constructor collaborators, interfaces, adapters, repositories, clients, and framework-facing boundaries
-- show DTOs or records when they are public contracts or key outputs
-- omit transient local-variable types when their relationship is already explained by a repository, client, adapter, or returned contract
-- omit duplicated edges from a service to entities when the repository relationship already communicates ownership/access clearly
-- keep the diagram readable even if that means it is not a complete import graph
-
 # Decision Checklist
 
 Before creating or moving a class, answer:
