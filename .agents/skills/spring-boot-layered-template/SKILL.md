@@ -185,6 +185,22 @@ Avoid ambiguous names:
 - `Processor`
 - `Handler` when there is no clear framework or pattern behind it
 
+# Class Boundaries
+
+Do not hide meaningful responsibilities as inner classes inside a larger class.
+
+Use a separate top-level class when the collaborator:
+
+- has its own concrete responsibility
+- performs external I/O or protocol-specific work
+- is worth naming in tests or documentation
+- can be replaced with a fake, stub, or alternate implementation
+- makes the parent class know too much about low-level details
+
+Example: keep `GoogleOAuthClient`, `TokenExchange`, and `HttpTokenExchange` as separate files instead of nesting the HTTP token exchange implementation inside the client facade.
+
+Inner classes are acceptable only for tiny private implementation details that have no independent responsibility and are not useful to test, name, or document separately.
+
 # Decision Checklist
 
 Before creating or moving a class, answer:
