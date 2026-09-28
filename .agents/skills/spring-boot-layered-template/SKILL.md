@@ -201,6 +201,28 @@ Example: keep `GoogleOAuthClient`, `TokenExchange`, and `HttpTokenExchange` as s
 
 Inner classes are acceptable only for tiny private implementation details that have no independent responsibility and are not useful to test, name, or document separately.
 
+# Constants
+
+Use constants for stable contract values that are meaningful across a feature or protocol.
+
+Good candidates:
+
+- query parameter names
+- cookie names and cookie attributes
+- external provider claim names
+- fixed fallback URLs or error markers
+- protocol values reused across classes or tests
+
+Prefer a `constants/` package with small categorized files such as `OAuthParameters`, `GoogleClaims`, `SessionCookies`, or `LoginRedirects`.
+
+Do not create a single global `Constants` class. It becomes a dumping ground and hides ownership.
+
+Do not extract strings just because they exist. Keep literals inline when they are clearer next to their framework annotation or local rule.
+
+In particular, keep HTTP routes inline in Spring annotations unless the same path must be assembled outside annotations and there is real risk of divergence. For example, `@RequestMapping("/accounts")` and `@GetMapping("/session")` are usually clearer than route constants.
+
+Do not move JPA table/column names, `requireNonNull` parameter names, or one-off validation messages into constants unless they are reused outside their declaring class.
+
 # Decision Checklist
 
 Before creating or moving a class, answer:
