@@ -53,7 +53,7 @@ class ProductControllerWebTest {
     @Test
     void listsProductsForAccount() throws Exception {
         UUID owner = UUID.randomUUID();
-        when(productService.list(owner)).thenReturn(List.of(response()));
+        when(productService.list(owner, null)).thenReturn(List.of(response()));
 
         mockMvc.perform(get("/catalog/products").param("ownerAccountId", owner.toString()))
                 .andExpect(status().isOk())

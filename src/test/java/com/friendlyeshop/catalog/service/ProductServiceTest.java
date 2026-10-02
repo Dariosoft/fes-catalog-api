@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.friendlyeshop.catalog.client.storage.ImageContent;
@@ -105,7 +106,7 @@ class ProductServiceTest {
                 .thenReturn(page);
         lenient().when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of());
 
-        List<ProductResponse> responses = service.list(owner);
+        List<ProductResponse> responses = service.list(owner, null);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).ownerAccountId()).isEqualTo(owner);
@@ -117,9 +118,24 @@ class ProductServiceTest {
         when(productRepository.findByOwnerAccountIdAndDeletedAtIsNull(eq(owner), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        List<ProductResponse> responses = service.list(owner);
+        List<ProductResponse> responses = service.list(owner, null);
 
         assertThat(responses).isEmpty();
+    }
+
+    @Test
+    void filtersByNameWhenProvided() {
+        UUID owner = UUID.randomUUID();
+        when(productRepository.findByOwnerAccountIdAndNameContainingIgnoreCaseAndDeletedAtIsNull(
+                        eq(owner), eq("mat"), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        List<ProductResponse> responses = service.list(owner, "mat");
+
+        assertThat(responses).isEmpty();
+        verify(productRepository)
+                .findByOwnerAccountIdAndNameContainingIgnoreCaseAndDeletedAtIsNull(
+                        eq(owner), eq("mat"), any(Pageable.class));
     }
 
     @Test

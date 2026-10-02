@@ -13,6 +13,9 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     Page<Product> findByOwnerAccountIdAndDeletedAtIsNull(UUID ownerAccountId, Pageable pageable);
 
+    Page<Product> findByOwnerAccountIdAndNameContainingIgnoreCaseAndDeletedAtIsNull(
+            UUID ownerAccountId, String name, Pageable pageable);
+
     Optional<Product> findByIdAndOwnerAccountIdAndDeletedAtIsNull(UUID id, UUID ownerAccountId);
 
     List<Product> findByOwnerAccountIdAndStageAndDeletedAtIsNull(UUID ownerAccountId, ProductStage stage);

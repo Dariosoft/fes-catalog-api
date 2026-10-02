@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,11 +50,12 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> list(UUID ownerAccountId) {
-        List<Product> products = productRepository
-                .findByOwnerAccountIdAndDeletedAtIsNull(ownerAccountId, Pageable.unpaged())
-                .getContent();
-        return products.stream()
+    public List<ProductResponse> list(UUID ownerAccountId, String name) {
+        Page<Product> page = (name == null || name.isBlank())
+                ? productRepository.findByOwnerAccountIdAndDeletedAtIsNull(ownerAccountId, Pageable.unpaged())
+                : productRepository.findByOwnerAccountIdAndNameContainingIgnoreCaseAndDeletedAtIsNull(
+                        ownerAccountId, name, Pageable.unpaged());
+        return page.getContent().stream()
                 .map(product -> responseMapper.toResponse(
                         product, productImageRepository.findByProductId(product.getId())))
                 .toList();

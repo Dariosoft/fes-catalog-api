@@ -37,8 +37,10 @@ public class ProductController {
     }
 
     @GetMapping("/products")
-    public List<ProductResponse> list(@RequestParam UUID ownerAccountId) {
-        return productService.list(ownerAccountId);
+    public List<ProductResponse> list(
+            @RequestParam UUID ownerAccountId,
+            @RequestParam(required = false) String name) {
+        return productService.list(ownerAccountId, name);
     }
 
     @PostMapping(path = "/products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
