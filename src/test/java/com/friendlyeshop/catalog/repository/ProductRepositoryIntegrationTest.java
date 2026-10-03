@@ -82,6 +82,7 @@ class ProductRepositoryIntegrationTest {
         assertThat(images.get(0).getObjectKey()).isEqualTo("products/x/y");
     }
 
+    @SuppressWarnings("null")
     @Test
     void listExcludesDeletedAndOtherAccounts() {
         UUID owner = UUID.randomUUID();
@@ -109,6 +110,7 @@ class ProductRepositoryIntegrationTest {
                 .isEmpty();
     }
 
+    @SuppressWarnings("null")
     @Test
     void findsAccountDraftsOnly() {
         UUID owner = UUID.randomUUID();
