@@ -176,11 +176,13 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
   - Done when: test MockMvc confirma bytes, `Content-Type`, el 404 de imagen
     inexistente y que no se requiere sesión ni credenciales.
 
-- [x] **T21. Conservar `CatalogController` y las rutas**
+- [x] **T21. Conservar los endpoints de Actuator**
   - Cubre: RF-24
-  - Mantener `GET /catalog` (sobre público del servicio/market) y verificar que
-    Actuator (`health`, `info`, `prometheus`) sigue expuesto.
-  - Done when: `GET /catalog` y los endpoints de Actuator responden tras el cambio.
+  - Mantener expuestos los endpoints de Actuator (`health`, `info`, `prometheus`)
+    usados por Kubernetes; no exponer un endpoint de lectura global del catálogo
+    publicado en esta iteración.
+  - Done when: los endpoints de Actuator responden tras el cambio y no existe un
+    endpoint de lectura global del catálogo.
 
 ## Ajustes surgidos durante la implementación (as-built)
 
@@ -214,8 +216,8 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 - [x] **T23. Tests web MockMvc de todos los endpoints**
   - Cubre: RF-6, RF-7, RF-9, RF-11, RF-12, RF-13, RF-14, RF-15, RF-16, RF-18,
     RF-19, RF-23, RF-24, RF-25
-  - Cubrir operaciones, validaciones, errores del plan §11 y conservación de
-    `GET /catalog`.
+  - Cubrir operaciones, validaciones, errores del plan §11 y la conservación de
+    los endpoints de Actuator.
   - Done when: cada endpoint tiene al menos un test con estado y cuerpo esperados.
 
 - [x] **T24. Tests de integración JPA con Testcontainers**

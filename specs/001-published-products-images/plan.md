@@ -29,15 +29,16 @@ implementada** la funcionalidad, no un plan previo.
   física queda fuera de alcance. **(RF-9, RF-10)**
 - El listado de la cuenta se filtra opcionalmente por nombre (`name`, contains,
   ignorando mayúsculas) usando `Pageable.unpaged()`. **(RF-25)**
-- `GET /catalog` se conserva como punto de lectura pública del catálogo orientado
-  al market y como sobre de estado del servicio. **(RF-24)**
+- Se conservan los endpoints de Actuator (health, info, prometheus) usados por
+  Kubernetes; **no** se expone un endpoint de lectura global del catálogo publicado
+  en esta iteración. **(RF-24)**
 - No se tocan tablas de otros dominios; solo la base `catalog`. **(NFR-1, NFR-2)**
 
 ## 2. Estado as-built relevante
 
 - Spring Boot 4.1 / Java 25, paquete `com.friendlyeshop.catalog`.
-- `CatalogController` (`controller/`) expone `GET /catalog` con el sobre
-  `{service, status, products}`; se conserva. **(RF-24)**
+- Los endpoints de Actuator (`health`, `info`, `prometheus`) siguen expuestos para
+  Kubernetes; no hay controller de lectura global del catálogo. **(RF-24)**
 - `V1__create_products.sql` define `products` con `owner_account_id` nullable,
   `stage`, `currency`, `stock` nullable, `deleted_at`, `version`, y
   `product_images`; **no existe `tenant_id`**.
@@ -52,7 +53,7 @@ implementada** la funcionalidad, no un plan previo.
   `CatalogApiApplication` (no con `@Component` sobre los records, que rompía el
   binding de constructor). **(NFR-8)**
 - Pruebas: unitarias de entidad, enums, DTOs, servicios, storage y mapper; web
-  MockMvc de `CatalogController`, `ProductController` y `ProductImageController`;
+  MockMvc de `ProductController` y `ProductImageController`;
   integración `@DataJpaTest` con Testcontainers PostgreSQL; y de configuración
   (storage, multipart, actuator).
 
@@ -62,7 +63,6 @@ implementada** la funcionalidad, no un plan previo.
 src/main/java/com/friendlyeshop/catalog
 ├── CatalogApiApplication             # @SpringBootApplication + @ConfigurationPropertiesScan
 ├── controller/
-│   ├── CatalogController            # GET /catalog (conservado)          RF-24
 │   ├── ProductController            # CRUD + publish/unpublish/publish   RF-2,4-9,11-16,25
 │   └── ProductImageController       # GET /catalog/images/{id} público    RF-18,19
 ├── service/
@@ -289,7 +289,6 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 
 | Método y ruta | Entrada / salida | RF |
 |---|---|---|
-| `GET /catalog` | Sobre público del servicio/market `{service, status, products}` | RF-24 |
 | `GET /catalog/products?ownerAccountId=&name=` | Lista de productos de la cuenta, cualquier etapa, filtrable por nombre | RF-6, RF-7, RF-25 |
 | `POST /catalog/products?ownerAccountId=` | `multipart/form-data` (campos + partes `images`); crea draft; `ownerAccountId` opcional | RF-2, RF-4, RF-5, RF-17, RF-20, RF-21, RF-22 |
 | `PUT /catalog/products/{id}?ownerAccountId=` | `multipart/form-data`; actualiza el producto de la cuenta | RF-8, RF-17 |
@@ -306,9 +305,8 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 - `ProductController` delgado: HTTP → `ProductService` /
   `ProductPublicationService`; sin reglas de negocio.
 - No existe endpoint de escritura de imágenes. **(RF-18)**
-- `GET /catalog` conserva el sobre del servicio; su propósito es ser la lectura
-  pública del catálogo para el market (poblar `products` con publicados es un
-  desarrollo aparte). **(RF-24)**
+- Los endpoints de Actuator (`health`, `info`, `prometheus`) siguen expuestos; no
+  hay endpoint de lectura global del catálogo publicado en esta iteración. **(RF-24)**
 
 ## 10. DTOs y contrato JSON — RF-19
 
@@ -396,7 +394,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | `ProductController` (MockMvc) | Multipart, validaciones, listado con/sin `name`, publish/unpublish, publish catálogo, 404 de otra cuenta | RF-6, RF-7, RF-11 … RF-16, RF-23, RF-25 |
 | `ProductImageController` | Devuelve bytes, `Content-Type` y 404 de imagen inexistente | RF-18, RF-19 |
 | Configuración | Binding de `fes.storage` (falla si falta una obligatoria); multipart 2MB/25MB; Actuator expone health/info/prometheus | NFR-5, NFR-8 |
-| Conservación | `GET /catalog` sigue respondiendo | RF-24 |
+| Conservación | Actuator (`health`, `info`, `prometheus`) sigue expuesto | RF-24 |
 
 - Unitarios: entidad, enums, DTOs, servicios (repositorios mock e `ImageStorage`
   fake), `MinioImageStorage` (cliente mock) y mapper.
@@ -444,7 +442,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | RF-21 | Validación de moneda |
 | RF-22 | Sin default de moneda en el servicio |
 | RF-23 | Consultas por `ownerAccountId`; 404 si no coincide |
-| RF-24 | `CatalogController` y Actuator conservados |
+| RF-24 | Actuator conservado; sin lectura global del catálogo publicado |
 | RF-25 | Consulta `…NameContainingIgnoreCase…` + `name` en `ProductController` |
 
 ## 16. Orden de implementación seguido
@@ -459,8 +457,9 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
    (**RF-2, RF-4 … RF-10, RF-17, RF-19, RF-20, RF-21, RF-22, RF-23**).
 5. `ProductPublicationService`: publicar, despublicar y publicar catálogo
    (**RF-11 … RF-16**).
-6. `ProductController` y `ProductImageController`; conservar `GET /catalog`
-   (**RF-6, RF-7, RF-8, RF-9, RF-11, RF-14, RF-15, RF-16, RF-18, RF-19, RF-24**).
+6. `ProductController` y `ProductImageController`; conservar los endpoints de
+   Actuator (**RF-6, RF-7, RF-8, RF-9, RF-11, RF-14, RF-15, RF-16, RF-18, RF-19,
+   RF-24**).
 7. Ajustes surgidos en la implementación: registro de `@ConfigurationProperties`
    por escaneo (**NFR-8**) y filtro por nombre en el listado (**RF-25**).
 8. Matriz de tests y `./mvnw verify` (**RF-1 … RF-25**, criterios de
@@ -468,8 +467,8 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 
 ## 17. Fuera de alcance (no implementado aquí)
 
-- Poblar `GET /catalog` con el listado global de publicados para el market, con
-  paginación, búsqueda o detalle por producto. **(RF-24 conserva el sobre)**
+- Exponer un endpoint de lectura global del catálogo publicado para el market, con
+  paginación, búsqueda o detalle por producto. **(RF-24 lo excluye en esta iteración)**
 - Purga física de productos y borrado de objetos en MinIO.
 - Frontera `/panel/catalog`, login, sesión, borrador local del navegador y UI.
 - Provisión de bucket/credenciales/ruta local e ingress (pertenece a `infra`).

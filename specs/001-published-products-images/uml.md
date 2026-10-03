@@ -14,8 +14,9 @@ panel llega a través de la frontera `panel-api`, que valida la sesión y fija e
 alta/edición del producto (`multipart/form-data` en `POST`/`PUT
 /catalog/products`) y se guardan en MinIO; se leen por una URL pública servida por
 este servicio (`GET /catalog/images/{imageId}`), de modo que el consumidor nunca
-usa credenciales de MinIO. El borrado es lógico y conserva los objetos. `GET
-/catalog` se conserva como punto de lectura pública orientado al market.
+usa credenciales de MinIO. El borrado es lógico y conserva los objetos. Los
+endpoints de Actuator (`health`, `info`, `prometheus`) se conservan para
+Kubernetes; no se expone una lectura global del catálogo publicado.
 
 ## 2. Diagrama de componentes
 
@@ -29,7 +30,6 @@ flowchart TB
     subgraph controllers [controller]
       ProductCtrl[ProductController<br/>/catalog/products<br/>list·create·update·delete·publish·unpublish·publishCatalog]
       ImageCtrl[ProductImageController<br/>/catalog/images/{id}]
-      CatalogCtrl[CatalogController<br/>GET /catalog · lectura market]
     end
 
     subgraph services [service]
@@ -84,7 +84,6 @@ flowchart TB
   ImageRepo --> DB
   Mapper --> CatalogProps[CatalogProperties<br/>PUBLIC_API_BASE_URL]
   Config --> Minio
-  CatalogCtrl -.->|"lectura market (publicados: fuera de alcance)"| ProductRepo
 ```
 
 Variables de entorno relevantes: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`,
@@ -99,10 +98,6 @@ variable local. Los DTOs y errores se citan como contratos de frontera.
 ```mermaid
 classDiagram
   direction TB
-
-  class CatalogController {
-    +catalog() Map
-  }
 
   class ProductController {
     -ProductService productService
@@ -288,7 +283,6 @@ classDiagram
 
   ProductController --> ProductService
   ProductController --> ProductPublicationService
-  CatalogController ..> ProductRepository : market (publicados, fuera de alcance)
   ProductImageController --> ProductImageRepository
   ProductImageController --> ImageStorage
   ProductService --> ProductRepository

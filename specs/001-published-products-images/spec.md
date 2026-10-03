@@ -11,7 +11,7 @@ del producto (`multipart/form-data`), no por un endpoint de escritura aparte, y 
 leen a través de una URL pública servida por `catalog-api`, sin que el consumidor
 maneje credenciales de MinIO. El panel da de alta, lista (con filtro por nombre),
 publica y despublica productos de una cuenta; el market consumirá los publicados
-a través de `GET /catalog`. El objetivo es que el servicio concentre la verdad de
+en un desarrollo futuro, fuera de esta iteración. El objetivo es que el servicio concentre la verdad de
 productos, precios y stock sin invadir el borrador local del navegador, el login
 ni la frontera del panel.
 
@@ -21,9 +21,8 @@ ni la frontera del panel.
   lista, publica, despublica y elimina productos de su cuenta.
 - **`panel-api`**: frontera que valida la sesión, fija el `ownerAccountId` y
   reenvía las operaciones; es el cliente directo de este servicio.
-- **Market (futuro)**: consumidor de solo lectura de los productos publicados a
-  través de `GET /catalog`; su listado global completo es un desarrollo aparte,
-  fuera de esta iteración.
+- **Market (futuro)**: consumidor de solo lectura de los productos publicados; su
+  listado global es un desarrollo aparte, fuera de esta iteración.
 - **Operación/Infra**: provee MinIO y el cableado de entorno; no gestiona el
   esquema de productos ni la publicación.
 
@@ -95,10 +94,9 @@ ni la frontera del panel.
   reside en el panel.
 - RF-23: CUANDO una operación sobre un producto reciba un `ownerAccountId` distinto
   del dueño del producto, EL SISTEMA tratará el producto como inexistente.
-- RF-24: EL SISTEMA conservará `GET /catalog` como punto de lectura pública del
-  catálogo orientado al market —expuesto para devolver únicamente productos
-  publicados— y los endpoints de Actuator, health checks y métricas usados por
-  Kubernetes.
+- RF-24: EL SISTEMA conservará los endpoints de Actuator, health checks y métricas
+  usados por Kubernetes, y no expondrá un endpoint de lectura global del catálogo
+  publicado en esta iteración.
 - RF-25: CUANDO se consulte `GET /catalog/products` con `ownerAccountId` y `name`,
   EL SISTEMA devolverá únicamente los productos de esa cuenta cuyo nombre contenga
   el texto indicado, ignorando mayúsculas y minúsculas (respuesta con la lista
@@ -150,9 +148,9 @@ ni la frontera del panel.
 
 ## Fuera de alcance
 
-- La compleción del listado global de productos publicados en `GET /catalog` (hoy
-  responde el sobre del servicio con `products` vacío): su paginación, búsqueda y
-  detalle por producto son un desarrollo futuro aparte.
+- La lectura pública del catálogo publicado para el market: no hay endpoint en esta
+  iteración; su paginación, búsqueda y detalle por producto son un desarrollo futuro
+  aparte.
 - La purga física de productos y la eliminación definitiva de sus objetos en MinIO.
 - El borrador local del navegador y la gestión de sesión (`panel-web`).
 - El login y la validación de `fes_session` (`account-api`, `panel-api`).
