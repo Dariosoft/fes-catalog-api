@@ -1,7 +1,7 @@
 package com.friendlyeshop.catalog.repository;
 
 import com.friendlyeshop.catalog.model.Product;
-import com.friendlyeshop.catalog.model.ProductStage;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.model;
+package com.friendlyeshop.catalog.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

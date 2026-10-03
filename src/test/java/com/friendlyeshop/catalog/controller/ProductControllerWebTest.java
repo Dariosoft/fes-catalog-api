@@ -17,8 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.exception.StorageUnavailableException;
-import com.friendlyeshop.catalog.model.Currency;
-import com.friendlyeshop.catalog.model.ProductStage;
+import com.friendlyeshop.catalog.model.enums.Currency;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.model.dto.ProductForm;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;

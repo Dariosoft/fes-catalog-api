@@ -3,10 +3,10 @@ package com.friendlyeshop.catalog.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.friendlyeshop.catalog.config.CatalogProperties;
-import com.friendlyeshop.catalog.model.Currency;
+import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.ProductStage;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import java.math.BigDecimal;
 import java.util.List;

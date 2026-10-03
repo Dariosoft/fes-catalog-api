@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
+import com.friendlyeshop.catalog.model.enums.Currency;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;

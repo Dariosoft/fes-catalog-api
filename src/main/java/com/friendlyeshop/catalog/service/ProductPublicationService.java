@@ -3,7 +3,7 @@ package com.friendlyeshop.catalog.service;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
-import com.friendlyeshop.catalog.model.ProductStage;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogItem;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;

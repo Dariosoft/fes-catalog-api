@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.model;
+package com.friendlyeshop.catalog.model.enums;
 
 public enum Currency {
     ARS,

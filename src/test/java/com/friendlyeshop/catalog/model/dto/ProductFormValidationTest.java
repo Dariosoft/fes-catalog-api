@@ -2,7 +2,7 @@ package com.friendlyeshop.catalog.model.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.friendlyeshop.catalog.model.Currency;
+import com.friendlyeshop.catalog.model.enums.Currency;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

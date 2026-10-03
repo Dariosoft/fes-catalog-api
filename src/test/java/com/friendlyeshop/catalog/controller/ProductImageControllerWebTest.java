@@ -8,10 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.friendlyeshop.catalog.client.storage.ImageContent;
-import com.friendlyeshop.catalog.client.storage.ImageStorage;
-import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.repository.ProductImageRepository;
-import java.util.Optional;
+import com.friendlyeshop.catalog.exception.ProductNotFoundException;
+import com.friendlyeshop.catalog.service.ProductImageService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +26,12 @@ class ProductImageControllerWebTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ProductImageRepository productImageRepository;
-
-    @MockitoBean
-    private ImageStorage imageStorage;
+    private ProductImageService productImageService;
 
     @Test
     void streamsImageWithContentType() throws Exception {
         UUID imageId = UUID.randomUUID();
-        ProductImage image = ProductImage.of(imageId, UUID.randomUUID(), "products/a/b", "image/png");
-        when(productImageRepository.findById(imageId)).thenReturn(Optional.of(image));
-        when(imageStorage.load("products/a/b"))
+        when(productImageService.read(imageId))
                 .thenReturn(new ImageContent(new ByteArrayResource("bytes".getBytes()), "image/png"));
 
         mockMvc.perform(get("/catalog/images/{imageId}", imageId))
@@ -50,7 +43,8 @@ class ProductImageControllerWebTest {
     @Test
     void returnsNotFoundWhenImageIsMissing() throws Exception {
         UUID imageId = UUID.randomUUID();
-        when(productImageRepository.findById(imageId)).thenReturn(Optional.empty());
+        when(productImageService.read(imageId))
+                .thenThrow(new ProductNotFoundException("La imagen no existe"));
 
         mockMvc.perform(get("/catalog/images/{imageId}", imageId))
                 .andExpect(status().isNotFound())

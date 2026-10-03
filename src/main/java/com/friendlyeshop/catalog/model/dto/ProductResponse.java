@@ -1,7 +1,7 @@
 package com.friendlyeshop.catalog.model.dto;
 
-import com.friendlyeshop.catalog.model.Currency;
-import com.friendlyeshop.catalog.model.ProductStage;
+import com.friendlyeshop.catalog.model.enums.Currency;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

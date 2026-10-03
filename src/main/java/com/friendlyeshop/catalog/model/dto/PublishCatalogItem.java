@@ -1,6 +1,6 @@
 package com.friendlyeshop.catalog.model.dto;
 
-import com.friendlyeshop.catalog.model.Currency;
+import com.friendlyeshop.catalog.model.enums.Currency;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

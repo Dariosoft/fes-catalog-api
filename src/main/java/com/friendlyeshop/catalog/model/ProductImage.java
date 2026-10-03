@@ -7,9 +7,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 
 @Entity
 @Table(name = "product_images")
+@Getter
 public class ProductImage {
 
     @Id
@@ -42,25 +44,5 @@ public class ProductImage {
     @PrePersist
     void onCreate() {
         this.createdAt = Instant.now();
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public UUID getProductId() {
-        return productId;
-    }
-
-    public String getObjectKey() {
-        return objectKey;
-    }
-
-    public String getContentType() {
-        return contentType;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
     }
 }

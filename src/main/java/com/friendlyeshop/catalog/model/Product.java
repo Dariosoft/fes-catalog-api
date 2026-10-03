@@ -1,6 +1,9 @@
 package com.friendlyeshop.catalog.model;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
+import com.friendlyeshop.catalog.model.converters.ProductStageConverter;
+import com.friendlyeshop.catalog.model.enums.Currency;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -15,9 +18,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Getter;
 
 @Entity
 @Table(name = "products")
+@Getter
 public class Product {
 
     @Id
@@ -122,49 +127,5 @@ public class Product {
     @PreUpdate
     void onUpdate() {
         this.updatedAt = Instant.now();
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public UUID getOwnerAccountId() {
-        return ownerAccountId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public Currency getCurrency() {
-        return currency;
-    }
-
-    public Integer getStock() {
-        return stock;
-    }
-
-    public ProductStage getStage() {
-        return stage;
-    }
-
-    public Instant getDeletedAt() {
-        return deletedAt;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 }

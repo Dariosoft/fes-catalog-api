@@ -1,4 +1,6 @@
-package com.friendlyeshop.catalog.model;
+package com.friendlyeshop.catalog.model.converters;
+
+import com.friendlyeshop.catalog.model.enums.ProductStage;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

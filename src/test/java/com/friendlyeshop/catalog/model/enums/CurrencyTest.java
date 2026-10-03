@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.model;
+package com.friendlyeshop.catalog.model.enums;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

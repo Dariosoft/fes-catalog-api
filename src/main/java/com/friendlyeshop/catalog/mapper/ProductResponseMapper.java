@@ -5,6 +5,7 @@ import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
 import com.friendlyeshop.catalog.model.dto.ProductImageResponse;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.util.UrlUtils;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -42,8 +43,6 @@ public class ProductResponseMapper {
     }
 
     private String publicUrl(UUID imageId) {
-        String baseUrl = properties.publicBaseUrl();
-        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        return normalized + IMAGE_PATH + imageId;
+        return UrlUtils.join(properties.publicBaseUrl(), IMAGE_PATH + imageId);
     }
 }
