@@ -44,6 +44,7 @@ class ProductRepositoryIntegrationTest {
 
     @Test
     void migrationCreatesSchemaWithoutTenantColumn() {
+        @SuppressWarnings("null")
         List<String> columns = entityManager
                 .createNativeQuery("select column_name from information_schema.columns where table_name = 'products'")
                 .getResultList()
