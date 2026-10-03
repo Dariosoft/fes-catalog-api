@@ -1,5 +1,6 @@
 package com.friendlyeshop.catalog.client.storage;
 
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -76,7 +77,7 @@ class MinioImageStorageTest {
         when(minioClient.getObject(any(GetObjectArgs.class))).thenReturn(getObjectResponse);
         when(statObjectResponse.contentType()).thenReturn("image/jpeg");
 
-        ImageContent content = storage.load("products/a/b");
+        ProductImageContent content = storage.load("products/a/b");
 
         assertThat(content.contentType()).isEqualTo("image/jpeg");
         assertThat(content.resource()).isNotNull();

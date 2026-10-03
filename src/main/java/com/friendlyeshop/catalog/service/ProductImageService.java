@@ -1,6 +1,6 @@
 package com.friendlyeshop.catalog.service;
 
-import com.friendlyeshop.catalog.client.storage.ImageContent;
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import com.friendlyeshop.catalog.client.storage.ImageStorage;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.model.ProductImage;
@@ -22,7 +22,7 @@ public class ProductImageService {
     }
 
     @Transactional(readOnly = true)
-    public ImageContent read(UUID imageId) {
+    public ProductImageContent read(UUID imageId) {
         ProductImage image = productImageRepository.findById(imageId)
                 .orElseThrow(() -> new ProductNotFoundException("La imagen no existe"));
         return imageStorage.load(image.getObjectKey());

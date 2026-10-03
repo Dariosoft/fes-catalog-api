@@ -1,5 +1,6 @@
 package com.friendlyeshop.catalog.client.storage;
 
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import com.friendlyeshop.catalog.config.StorageProperties;
 import com.friendlyeshop.catalog.exception.StorageUnavailableException;
 import io.minio.GetObjectArgs;
@@ -47,7 +48,7 @@ public class MinioImageStorage implements ImageStorage {
     }
 
     @Override
-    public ImageContent load(String objectKey) {
+    public ProductImageContent load(String objectKey) {
         try {
             StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
                     .bucket(properties.bucket())
@@ -57,7 +58,7 @@ public class MinioImageStorage implements ImageStorage {
                     .bucket(properties.bucket())
                     .object(objectKey)
                     .build());
-            return new ImageContent(new InputStreamResource(stream), stat.contentType());
+            return new ProductImageContent(new InputStreamResource(stream), stat.contentType());
         } catch (Exception exception) {
             throw new StorageUnavailableException("No se pudo leer la imagen del producto", exception);
         }

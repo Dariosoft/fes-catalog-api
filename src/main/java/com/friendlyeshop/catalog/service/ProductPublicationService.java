@@ -1,6 +1,5 @@
 package com.friendlyeshop.catalog.service;
 
-import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
@@ -24,23 +23,27 @@ public class ProductPublicationService {
 
     private final ProductResponseMapper responseMapper;
 
+    private final ProductLookup productLookup;
+
     public ProductPublicationService(ProductRepository productRepository,
-            ProductImageRepository productImageRepository, ProductResponseMapper responseMapper) {
+            ProductImageRepository productImageRepository, ProductResponseMapper responseMapper,
+            ProductLookup productLookup) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.responseMapper = responseMapper;
+        this.productLookup = productLookup;
     }
 
     @Transactional
     public ProductResponse publish(UUID ownerAccountId, UUID id) {
-        Product product = findOwnedProduct(ownerAccountId, id);
+        Product product = productLookup.findOwned(ownerAccountId, id);
         product.publish();
         return responseMapper.toResponse(product, productImageRepository.findByProductId(product.getId()));
     }
 
     @Transactional
     public ProductResponse unpublish(UUID ownerAccountId, UUID id) {
-        Product product = findOwnedProduct(ownerAccountId, id);
+        Product product = productLookup.findOwned(ownerAccountId, id);
         product.unpublish();
         return responseMapper.toResponse(product, productImageRepository.findByProductId(product.getId()));
     }
@@ -72,10 +75,5 @@ public class ProductPublicationService {
             draft.publish();
         }
         return drafts.size();
-    }
-
-    private Product findOwnedProduct(UUID ownerAccountId, UUID id) {
-        return productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(id, ownerAccountId)
-                .orElseThrow(() -> new ProductNotFoundException("El producto no existe para la cuenta"));
     }
 }

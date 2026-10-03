@@ -46,12 +46,19 @@ implementada** la funcionalidad, no un plan previo.
   RabbitMQ, Actuator/prometheus, multipart 2MB/25MB, puerto 8080. **(NFR-5,
   RF-24)**
 - Dependencias añadidas: `spring-boot-starter-validation`,
-  `io.minio:minio:8.5.17` y, en test, `spring-boot-webmvc-test`,
-  `spring-boot-data-jpa-test`, `spring-boot-testcontainers`,
-  `testcontainers-postgresql` y `testcontainers-junit-jupiter`.
+  `io.minio:minio:8.5.17`, `org.projectlombok:lombok` (solo `@Getter` en las
+  entidades) y, en test, `spring-boot-webmvc-test`, `spring-boot-data-jpa-test`,
+  `spring-boot-testcontainers`, `testcontainers-postgresql` y
+  `testcontainers-junit-jupiter`.
 - Configuración enlazada por `@ConfigurationPropertiesScan` en
   `CatalogApiApplication` (no con `@Component` sobre los records, que rompía el
   binding de constructor). **(NFR-8)**
+- Ajustes de organización as-built: `model/` guarda solo entidades JPA y los
+  enums/converters/DTOs se reparten en `model/enums/`, `model/converters/` y
+  `model/dto/`; `ProductLookup` centraliza la carga por dueño; `ProductImageService`
+  media entre `ProductImageController` y `client/storage/`; y `util/UrlUtils`
+  concentra el armado de URLs. Los controladores no tocan repositorios ni
+  clientes. **(RF-19, RF-23, NFR-8)**
 - Pruebas: unitarias de entidad, enums, DTOs, servicios, storage y mapper; web
   MockMvc de `ProductController` y `ProductImageController`;
   integración `@DataJpaTest` con Testcontainers PostgreSQL; y de configuración
@@ -67,31 +74,37 @@ src/main/java/com/friendlyeshop/catalog
 │   └── ProductImageController       # GET /catalog/images/{id} público    RF-18,19
 ├── service/
 │   ├── ProductService               # alta, edición, listado, baja lógica RF-2,4-9,17,19-23,25
-│   └── ProductPublicationService    # publicar, despublicar, publicar cat. RF-11-16
+│   ├── ProductPublicationService    # publicar, despublicar, publicar cat. RF-11-16
+│   ├── ProductImageService          # lectura pública de bytes de imagen  RF-18,19
+│   └── ProductLookup                # colaborador: findOwned(owner, id)   RF-8,23
 ├── repository/
 │   ├── ProductRepository            # Spring Data JpaRepository
 │   └── ProductImageRepository       # Spring Data JpaRepository
-├── model/
-│   ├── Product                      # @Entity
-│   ├── ProductImage                 # @Entity
-│   ├── ProductStage                 # enum draft | published (@JsonValue minúsculas)
-│   ├── ProductStageConverter        # AttributeConverter ProductStage <-> String
-│   ├── Currency                     # enum ARS | USD
+├── model/                           # solo entidades JPA
+│   ├── Product                      # @Entity + Lombok @Getter
+│   ├── ProductImage                 # @Entity + Lombok @Getter
+│   ├── enums/
+│   │   ├── ProductStage             # enum draft | published (@JsonValue minúsculas)
+│   │   └── Currency                 # enum ARS | USD
+│   ├── converters/
+│   │   └── ProductStageConverter    # AttributeConverter ProductStage <-> String
 │   └── dto/
 │       ├── ProductForm              # entrada multipart POST/PUT
 │       ├── ProductResponse          # salida de producto
 │       ├── ProductImageResponse     # {id, url}
+│       ├── ProductImageContent      # {resource, contentType} para servir bytes
 │       ├── PublishCatalogItem       # ítem sin dueño del cuerpo
-│       ├── PublishCatalogRequest    # cuerpo de POST /catalog/publish
+│       ├── PublishCatalogRequest    # cuerpo de POST /catalog/publish (List<@Valid …>)
 │       ├── PublishCatalogResponse   # {published}
 │       └── ErrorResponse            # {error, message}
 ├── client/storage/
 │   ├── ImageStorage                 # interfaz (fake en tests)
 │   ├── MinioImageStorage            # implementación MinIO/S3
-│   ├── StoredImage                  # record {objectKey, contentType}
-│   └── ImageContent                 # record {resource, contentType}
+│   └── StoredImage                  # record {objectKey, contentType}
 ├── mapper/
-│   └── ProductResponseMapper        # entidad → ProductResponse (URL pública)
+│   └── ProductResponseMapper        # entidad → ProductResponse (URL pública vía UrlUtils)
+├── util/
+│   └── UrlUtils                     # join(baseUrl, path) para armar URLs
 ├── config/
 │   ├── StorageProperties            # fes.storage (S3_*)
 │   ├── CatalogProperties            # fes.catalog (PUBLIC_API_BASE_URL)
@@ -105,11 +118,20 @@ src/main/java/com/friendlyeshop/catalog
 
 Decisiones de ubicación según `/spring-boot-layered-template`:
 
+- `model/` contiene **solo entidades JPA** (`Product`, `ProductImage`); los enums
+  viven en `model/enums/`, los `AttributeConverter` en `model/converters/` y los
+  DTOs en `model/dto/` (incluido `ProductImageContent`, antes en `client/storage/`).
 - `client/storage/` porque MinIO es integración con un sistema/protocolo externo
   (S3); no contiene reglas de negocio ni acceso a repositorios propios.
 - `mapper/` porque la conversión entidad → respuesta se repite en listado,
-  creación, edición y publicación.
-- `exception/` para errores propios y el traductor HTTP; controladores delgados.
+  creación, edición y publicación; delega el armado de la URL en `util/UrlUtils`.
+- `util/UrlUtils` concentra el `join(baseUrl, path)` (normaliza barras) para no
+  repetir el armado de URLs por todo el código.
+- `service/ProductLookup` es un colaborador compartido de `ProductService` y
+  `ProductPublicationService`; evita duplicar `findOwned`/404 por cuenta ajena.
+- `exception/` para errores propios y el traductor HTTP; **los controladores son
+  delgados y no acceden a repositorios ni a clientes de infraestructura** (solo a
+  los servicios), y las entidades usan Lombok `@Getter`.
 
 ## 4. Persistencia (Flyway) — RF-1, RF-2, RF-3, RF-9, RF-10, RF-20, RF-23
 
@@ -162,6 +184,7 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 
 ### 5.1 `Product` (`model/Product`)
 
+- Entidad con Lombok `@Getter` (sin getters manuales).
 - Campos: `UUID id`, `UUID ownerAccountId` (nullable), `String name`,
   `BigDecimal price`, `Currency currency`, `Integer stock` (nullable),
   `ProductStage stage`, `Instant deletedAt` (nullable), `long version` (`@Version`),
@@ -183,18 +206,21 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 
 ### 5.2 `ProductImage` (`model/ProductImage`)
 
+- Entidad con Lombok `@Getter` (sin getters manuales).
 - Campos: `UUID id`, `UUID productId`, `String objectKey`, `String contentType`,
   `Instant createdAt`; se crea con `ProductImage.of(...)`. Asocia cada objeto de
   MinIO a su producto. **(RF-17)**
 
-### 5.3 Enumeraciones y conversor
+### 5.3 Enumeraciones (`model/enums`) y conversor (`model/converters`)
 
-- `ProductStage { DRAFT, PUBLISHED }`, con `@JsonValue` para serializar
-  `"draft"`/`"published"` en minúsculas y `from(String)` para reconstruir.
-- `Currency { ARS, USD }`; cualquier otro valor no se puede construir. **(RF-20,
-  RF-21)**
-- `ProductStageConverter` (`AttributeConverter<ProductStage, String>`) guarda la
-  etapa en minúsculas en la columna `stage`.
+- `ProductStage` (`model/enums/ProductStage`): `{ DRAFT, PUBLISHED }`, con
+  `@JsonValue` para serializar `"draft"`/`"published"` en minúsculas y
+  `from(String)` para reconstruir.
+- `Currency` (`model/enums/Currency`): `{ ARS, USD }`; cualquier otro valor no se
+  puede construir. **(RF-20, RF-21)**
+- `ProductStageConverter` (`model/converters/ProductStageConverter`,
+  `AttributeConverter<ProductStage, String>`) guarda la etapa en minúsculas en la
+  columna `stage`.
 
 ## 6. Repositorios (Spring Data) — RF-6, RF-7, RF-8, RF-9, RF-11, RF-14, RF-15, RF-23, RF-25
 
@@ -220,7 +246,7 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 
 - `ImageStorage` (interfaz):
   - `StoredImage store(UUID productId, UUID imageId, MultipartFile file)`.
-  - `ImageContent load(String objectKey)`.
+  - `ProductImageContent load(String objectKey)`.
   - Sin método `delete`: el borrado lógico conserva objetos. **(RF-10)**
 - `MinioImageStorage` implementa con el SDK de MinIO/S3:
   - `store`: sube el objeto a `{bucket}/products/{productId}/{imageId}` con
@@ -230,8 +256,10 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
   - `load`: resuelve el `contentType` con `StatObjectArgs`, descarga con
     `GetObjectArgs` y devuelve un `InputStreamResource` con ese tipo.
   - Fallos del almacenamiento → `StorageUnavailableException`.
-- `ImageContent` (`Resource`, `contentType`) y `StoredImage` (`objectKey`,
-  `contentType`) como records de transporte interno.
+- `ProductImageContent` (`Resource`, `contentType`, en `model/dto/`) y
+  `StoredImage` (`objectKey`, `contentType`, en `client/storage/`) como records de
+  transporte interno. `ProductImageContent` es un DTO de salida de
+  `ProductImageService`, no un tipo de `client/`.
 - El consumidor nunca recibe `S3_ACCESS_KEY`/`S3_SECRET_KEY`; solo URLs públicas.
   **(NFR-6, RF-19)**
 - `StorageConfig` construye el `MinioClient` con `endpoint`, `accessKey` y
@@ -250,11 +278,11 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
   sin dueño); si hay imágenes, las guarda en MinIO y crea `ProductImage`.
   Devuelve la respuesta con URLs públicas. **(RF-2, RF-4, RF-5, RF-17, RF-19,
   RF-20, RF-21)**
-- `update(ownerAccountId, id, form)`: valida, carga el producto de la cuenta,
-  aplica cambios y procesa imágenes nuevas (conserva las existentes). **(RF-8,
-  RF-17, RF-23)**
-- `deleteLogically(ownerAccountId, id)`: marca `deletedAt`; no borra objetos.
-  **(RF-9, RF-10, RF-23)**
+- `update(ownerAccountId, id, form)`: valida, carga el producto de la cuenta con
+  `ProductLookup.findOwned`, aplica cambios y procesa imágenes nuevas (conserva las
+  existentes). **(RF-8, RF-17, RF-23)**
+- `deleteLogically(ownerAccountId, id)`: carga con `ProductLookup.findOwned` y
+  marca `deletedAt`; no borra objetos. **(RF-9, RF-10, RF-23)**
 - `validateForm` defensivo: `name` no vacío, `price` ≥ 0, `currency` no nula y
   `stock` opcional ≥ 0; no aplica default de moneda. **(RF-20, RF-21, RF-22)**
 - Las imágenes se guardan con un `imageId` aleatorio por archivo y los vacíos se
@@ -262,11 +290,11 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 
 ### 8.2 `ProductPublicationService`
 
-- `publish(ownerAccountId, id)`: carga el producto de la cuenta y llama
-  `publish()`; rechaza sin dueño/nombre/precio sin cambiar etapa. **(RF-11, RF-12,
-  RF-13, RF-23)**
-- `unpublish(ownerAccountId, id)`: pasa a `draft` conservando `ownerAccountId`.
-  **(RF-14)**
+- `publish(ownerAccountId, id)`: carga el producto con `ProductLookup.findOwned` y
+  llama `publish()`; rechaza sin dueño/nombre/precio sin cambiar etapa. **(RF-11,
+  RF-12, RF-13, RF-23)**
+- `unpublish(ownerAccountId, id)`: carga con `ProductLookup.findOwned`, pasa a
+  `draft` conservando `ownerAccountId`. **(RF-14)**
 - `publishCatalog(ownerAccountId, request)`: en una transacción, publica los
   productos sin dueño incluidos en el cuerpo (los crea con `openNew(null, …)`,
   aplica `takeOwnership(ownerAccountId)` y `publish()`), y luego publica todos los
@@ -275,12 +303,29 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 - Idempotente ante repeticiones: publicar un `published` o despublicar un `draft`
   no cambia la etapa ni falla. (caso límite)
 
-### 8.3 `ProductResponseMapper` (`mapper/`)
+### 8.3 `ProductLookup` (`service/`)
+
+- Colaborador compartido por `ProductService` y `ProductPublicationService`.
+- `findOwned(ownerAccountId, id)`: busca con
+  `findByIdAndOwnerAccountIdAndDeletedAtIsNull` y lanza `ProductNotFoundException`
+  si no existe o es de otra cuenta. Elimina el `findOwnedProduct` duplicado.
+  **(RF-8, RF-23)**
+
+### 8.4 `ProductImageService` (`service/`)
+
+- `read(imageId)`: resuelve el `ProductImage` por id (si no existe →
+  `ProductNotFoundException`), carga el objeto por su `objectKey` con `ImageStorage`
+  y devuelve `ProductImageContent`. Es el mediador entre `ProductImageController` y
+  `client/storage/`, de modo que el controller no toca repositorios ni clientes.
+  **(RF-18, RF-19)**
+
+### 8.5 `ProductResponseMapper` (`mapper/`)
 
 - Convierte `Product` + `List<ProductImage>` a `ProductResponse` e incluye, por
   imagen, `ProductImageResponse(id, url)`.
 - La `url` es `{fes.catalog.public-base-url}/catalog/images/{imageId}`, normalizando
-  una barra final en la base, servida por `catalog-api`. **(RF-19)**
+  una barra final en la base, servida por `catalog-api`; el armado se delega en
+  `UrlUtils.join(baseUrl, path)` (`util/`). **(RF-19)**
 
 ## 9. API HTTP (capa `controller`) — RF-7, RF-9, RF-11, RF-14, RF-15, RF-16, RF-18, RF-19, RF-24, RF-25
 
@@ -298,12 +343,15 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | `POST /catalog/publish?ownerAccountId=` | JSON con los productos sin dueño; publica la sesión; `request` opcional | RF-15, RF-16 |
 | `GET /catalog/images/{imageId}` | Stream público de la imagen con su `Content-Type` y `Cache-Control` | RF-18, RF-19 |
 
-- `ProductImageController` resuelve el `ProductImage` por `imageId` y carga el
-  objeto por su `objectKey`; es el único punto que sirve bytes y no valida cuenta
-  porque la URL es pública y el `imageId` es un UUID opaco. Responde
+- `ProductImageController` depende de `ProductImageService.read(imageId)`, que
+  devuelve `ProductImageContent`; es el único punto que sirve bytes y no valida
+  cuenta porque la URL es pública y el `imageId` es un UUID opaco. Responde
   `Cache-Control: public, max-age=86400`. **(RF-19)**
 - `ProductController` delgado: HTTP → `ProductService` /
   `ProductPublicationService`; sin reglas de negocio.
+- **Regla as-built:** ningún controller importa `repository/` ni `client/`; solo
+  conoce los servicios (y los DTOs). La resolución de entidades queda en
+  `ProductLookup`/los servicios.
 - No existe endpoint de escritura de imágenes. **(RF-18)**
 - Los endpoints de Actuator (`health`, `info`, `prometheus`) siguen expuestos; no
   hay endpoint de lectura global del catálogo publicado en esta iteración. **(RF-24)**
@@ -333,7 +381,12 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 - `PublishCatalogItem`: `name` (`@NotBlank`), `price` (`@NotNull`,
   `@DecimalMin("0")`), `currency` (`@NotNull`), `stock` opcional (`@Min(0)`).
   **(RF-15)**
-- `PublishCatalogRequest`: `products` = lista de ítems sin dueño (puede ser nula).
+- `ProductImageContent`: `{ resource, contentType }`, DTO de salida de
+  `ProductImageService` hacia `ProductImageController` (no se expone como JSON).
+  **(RF-18, RF-19)**
+- `PublishCatalogRequest`: `products` = `List<@Valid PublishCatalogItem>` (puede
+  ser nula); la validación se declara sobre el tipo del elemento, no sobre el
+  contenedor, para evitar la deprecación de validación sobre `List`.
 - `PublishCatalogResponse`: `{ "published": n }`. **(RF-16)**
 - `ErrorResponse`: `{ "error": "...", "message": "..." }` en español. **(NFR-3)**
 - No se exponen entidades JPA en HTTP. `ProductStage` se serializa en minúsculas.
@@ -387,17 +440,19 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | Migración/esquema | `owner_account_id` nullable, `stage`, `currency`, `deleted_at`, `version`, `product_images`; sin `tenant_id` | RF-1, RF-3, RF-9, RF-20 |
 | `Product` | Nace draft; `publish` exige dueño/nombre/precio; `unpublish` conserva dueño; baja lógica | RF-2, RF-11, RF-12, RF-14 |
 | `ProductStage`/`Currency` | JSON/parseo en minúsculas y rechazo de valores inválidos | RF-1, RF-20, RF-21 |
-| `ProductService` | Alta/edición con imágenes; listado solo de la cuenta; filtro por nombre; sin dueño; moneda inválida; cuenta ajena | RF-4, RF-6, RF-7, RF-8, RF-17, RF-20, RF-21, RF-23, RF-25 |
-| `ProductPublicationService` | Publicar, despublicar, publicar catálogo (sin dueño + drafts), conteo 0, repeticiones y cuenta ajena | RF-11 … RF-16, RF-23 |
+| `ProductService` | Alta/edición con imágenes; listado solo de la cuenta; filtro por nombre; sin dueño; moneda inválida; cuenta ajena (vía `ProductLookup`) | RF-4, RF-6, RF-7, RF-8, RF-17, RF-20, RF-21, RF-23, RF-25 |
+| `ProductPublicationService` | Publicar, despublicar, publicar catálogo (sin dueño + drafts), conteo 0, repeticiones y cuenta ajena (vía `ProductLookup`) | RF-11 … RF-16, RF-23 |
+| `ProductImageService` | Resuelve la imagen por id, delega `load` en `ImageStorage` y traduce inexistente a `ProductNotFoundException` | RF-18, RF-19 |
 | `MinioImageStorage` | `store`/`load` con `MinioClient` mock; tipo de contenido; fallo → `StorageUnavailableException` | RF-17, RF-18 |
-| Mapper/URL | `images[].url` apunta a `/catalog/images/{id}` con la base pública normalizada | RF-19 |
+| Mapper/URL | `images[].url` apunta a `/catalog/images/{id}` con la base pública normalizada; `UrlUtils.join` normaliza barras | RF-19 |
 | `ProductController` (MockMvc) | Multipart, validaciones, listado con/sin `name`, publish/unpublish, publish catálogo, 404 de otra cuenta | RF-6, RF-7, RF-11 … RF-16, RF-23, RF-25 |
 | `ProductImageController` | Devuelve bytes, `Content-Type` y 404 de imagen inexistente | RF-18, RF-19 |
 | Configuración | Binding de `fes.storage` (falla si falta una obligatoria); multipart 2MB/25MB; Actuator expone health/info/prometheus | NFR-5, NFR-8 |
 | Conservación | Actuator (`health`, `info`, `prometheus`) sigue expuesto | RF-24 |
 
 - Unitarios: entidad, enums, DTOs, servicios (repositorios mock e `ImageStorage`
-  fake), `MinioImageStorage` (cliente mock) y mapper.
+  fake; incluye `ProductLookup`, `ProductImageService` y `UrlUtils`),
+  `MinioImageStorage` (cliente mock) y mapper.
 - Web: `MockMvc` para todos los endpoints y errores.
 - Integración: `@DataJpaTest` con PostgreSQL vía Testcontainers (perfil de test)
   para migración y consultas por dueño/etapa/deleted.
@@ -407,6 +462,8 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 
 - `io.minio:minio:8.5.17` (versión fijada) para el almacenamiento S3.
 - `spring-boot-starter-validation` para las validaciones declarativas.
+- `org.projectlombok:lombok` (versión fijada en el POM) para `@Getter` en las
+  entidades JPA.
 - Testcontainers PostgreSQL y soporte de test de Spring Boot (`webmvc-test`,
   `data-jpa-test`, `testcontainers`) en alcance `test`, versiones gestionadas por
   el BOM.
@@ -462,7 +519,11 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
    RF-24**).
 7. Ajustes surgidos en la implementación: registro de `@ConfigurationProperties`
    por escaneo (**NFR-8**) y filtro por nombre en el listado (**RF-25**).
-8. Matriz de tests y `./mvnw verify` (**RF-1 … RF-25**, criterios de
+8. Refactors de organización as-built: `ProductLookup` compartido, mover
+   `ImageContent` a `model/dto/ProductImageContent`, `@Valid` en el tipo del
+   elemento, Lombok `@Getter`, separar `model/enums`/`model/converters` y extraer
+   `UrlUtils.join` (**RF-8, RF-19, RF-23**).
+9. Matriz de tests y `./mvnw verify` (**RF-1 … RF-25**, criterios de
    finalización).
 
 ## 17. Fuera de alcance (no implementado aquí)

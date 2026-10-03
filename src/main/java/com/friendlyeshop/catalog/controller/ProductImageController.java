@@ -1,6 +1,6 @@
 package com.friendlyeshop.catalog.controller;
 
-import com.friendlyeshop.catalog.client.storage.ImageContent;
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import com.friendlyeshop.catalog.service.ProductImageService;
 import java.util.UUID;
 import org.springframework.core.io.Resource;
@@ -24,7 +24,7 @@ public class ProductImageController {
 
     @GetMapping("/{imageId}")
     public ResponseEntity<Resource> read(@PathVariable UUID imageId) {
-        ImageContent content = productImageService.read(imageId);
+        ProductImageContent content = productImageService.read(imageId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")

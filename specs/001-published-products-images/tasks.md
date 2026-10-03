@@ -19,8 +19,9 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 
 - [x] **T2. Enums `ProductStage` y `Currency`**
   - Cubre: RF-1, RF-20
-  - `model/ProductStage` (`DRAFT`, `PUBLISHED`) con `@JsonValue`/`from` en
-    minúsculas y `model/Currency` (`ARS`, `USD`) con `from` tolerante a mayúsculas.
+  - `model/enums/ProductStage` (`DRAFT`, `PUBLISHED`) con `@JsonValue`/`from` en
+    minúsculas y `model/enums/Currency` (`ARS`, `USD`) con `from` tolerante a
+    mayúsculas (ubicación final tras T32).
   - Done when: se puede crear el enum desde `"draft"`/`"ARS"` y un valor inválido
     no construye instancia.
 
@@ -204,13 +205,64 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
   - Done when: `StoragePropertiesTest` enlaza `fes.storage.*` desde propiedades y
     falla el contexto si falta una obligatoria; el arranque aplica las env reales.
 
+- [x] **T28. Extraer `service/ProductLookup` (`findOwned`)**
+  - Cubre: RF-8, RF-23
+  - Colaborador `@Component` compartido por `ProductService` y
+    `ProductPublicationService`; `findOwned(ownerAccountId, id)` resuelve por
+    `findByIdAndOwnerAccountIdAndDeletedAtIsNull` o lanza
+    `ProductNotFoundException`. Elimina el `findOwnedProduct` duplicado.
+  - Done when: ambos servicios usan `ProductLookup.findOwned` y sus tests siguen
+    cubriendo el 404 por cuenta ajena/inexistente sin lógica duplicada.
+
+- [x] **T29. Mover `ImageContent` a `model/dto/ProductImageContent` + `ProductImageService`**
+  - Cubre: RF-18, RF-19
+  - Mover el record de `client/storage/` a `model/dto/ProductImageContent`; hacer
+    que `ImageStorage.load` lo devuelva. Nuevo `service/ProductImageService.read`
+    que resuelve `ProductImage`, delega `load` en `ImageStorage` y lanza
+    `ProductNotFoundException` si no existe.
+  - Done when: `ProductImageController` depende solo de `ProductImageService` (sin
+    importar `repository/` ni `client/`) y el test web de bytes/`Content-Type`/404
+    pasa.
+
+- [x] **T30. `@Valid` sobre el elemento en `PublishCatalogRequest`**
+  - Cubre: RF-15
+  - Declarar `List<@Valid PublishCatalogItem> products` (validación en el tipo del
+    elemento) para evitar la deprecación de validación sobre el contenedor,
+    manteniendo el comportamiento.
+  - Done when: el test web de `POST /catalog/publish` sigue validando los ítems del
+    cuerpo sin warnings de deprecación.
+
+- [x] **T31. Lombok `@Getter` en las entidades JPA**
+  - Cubre: (refactor de estilo; toca RF-8, RF-17)
+  - Sustituir los getters manuales de `Product` y `ProductImage` por Lombok
+    `@Getter`; agregar la dependencia con versión fijada en el POM.
+  - Done when: `./mvnw verify` compila sin getters manuales y los tests de
+    entidad/mapper/servicios siguen verdes.
+
+- [x] **T32. Reorganizar `model/enums` y `model/converters`**
+  - Cubre: RF-1, RF-20
+  - Mover `ProductStage` y `Currency` a `model/enums/` y `ProductStageConverter` a
+    `model/converters/`; `model/` queda solo con las entidades JPA. Actualizar
+    imports.
+  - Done when: la app arranca con `ddl-auto: validate`, la columna `stage` sigue en
+    minúsculas y los tests de enums/converter pasan.
+
+- [x] **T33. Extraer `util/UrlUtils.join`**
+  - Cubre: RF-19
+  - Concentrar el armado de URLs en `util/UrlUtils.join(baseUrl, path)`
+    (normaliza barra final/inicial); `ProductResponseMapper` lo usa en lugar del
+    comportamiento inline.
+  - Done when: el test de `UrlUtils` cubre barras y el test del mapper verifica
+    `images[].url` con la base normalizada.
+
 ## Pruebas y cierre
 
 - [x] **T22. Tests unitarios de entidad, enums, DTOs, servicios, storage y mapper**
   - Cubre: RF-1, RF-2, RF-8 … RF-14, RF-17, RF-19, RF-20, RF-21, RF-22, RF-23, RF-25
   - Cubrir `Product`, `ProductStage`, `Currency`, validaciones de `ProductForm`,
-    `ProductService`, `ProductPublicationService`, `MinioImageStorage` (con cliente
-    mock) y `ProductResponseMapper`.
+    `ProductService`, `ProductPublicationService`, `ProductImageService`,
+    `ProductLookup`, `UrlUtils`, `MinioImageStorage` (con cliente mock) y
+    `ProductResponseMapper`.
   - Done when: la suite unitaria pasa y no depende de red ni de base real.
 
 - [x] **T23. Tests web MockMvc de todos los endpoints**
@@ -238,28 +290,28 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 
 | RF | Tareas |
 |---|---|
-| RF-1 | T1, T2, T2b, T24, T25 |
+| RF-1 | T1, T2, T2b, T24, T25, T32 |
 | RF-2 | T3, T12, T18, T22, T25 |
 | RF-3 | T1, T3, T24, T25 |
 | RF-4 | T12, T18, T23, T25 |
 | RF-5 | T12, T18, T25 |
 | RF-6 | T5, T14, T18, T23, T24, T25 |
 | RF-7 | T5, T10, T14, T18, T23, T25 |
-| RF-8 | T3, T5, T13, T18, T22, T25 |
+| RF-8 | T3, T5, T13, T18, T22, T25, T28 |
 | RF-9 | T1, T3, T5, T15, T18, T23, T24, T25 |
 | RF-10 | T1, T15, T25 |
 | RF-11 | T3, T16, T19, T22, T23, T25 |
 | RF-12 | T3, T10, T16, T19, T22, T23, T25 |
 | RF-13 | T3, T16, T22, T25 |
 | RF-14 | T3, T16, T19, T22, T23, T25 |
-| RF-15 | T5, T9, T17, T19, T23, T24, T25 |
+| RF-15 | T5, T9, T17, T19, T23, T24, T25, T30 |
 | RF-16 | T9, T17, T19, T23, T25 |
-| RF-17 | T4, T7, T12, T13, T18, T22, T25 |
-| RF-18 | T7, T20, T23, T25 |
-| RF-19 | T6, T9, T11, T20, T22, T23, T25 |
-| RF-20 | T1, T2, T9, T12, T22, T24, T25 |
+| RF-17 | T4, T7, T12, T13, T18, T22, T25, T31 |
+| RF-18 | T7, T20, T23, T25, T29 |
+| RF-19 | T6, T9, T11, T20, T22, T23, T25, T29, T33 |
+| RF-20 | T1, T2, T9, T12, T22, T24, T25, T32 |
 | RF-21 | T9, T10, T12, T22, T25 |
 | RF-22 | T12, T22, T25 |
-| RF-23 | T5, T10, T13, T15, T16, T23, T25 |
+| RF-23 | T5, T10, T13, T15, T16, T23, T25, T28 |
 | RF-24 | T21, T23, T25 |
 | RF-25 | T5, T14, T18, T22, T23, T25, T26 |

@@ -3,8 +3,9 @@
 Diagramas **as-built** alineados con `spec.md`, `plan.md` y `tasks.md`, y con las
 convenciones de `catalog-api` (`AGENTS.md`: Java 25 / Spring Boot 4.1, paquete
 `com.friendlyeshop.catalog`, arquitectura **Layered** con extensiones
-`client/storage` y `mapper`). Prosa en español; diagramas en Mermaid con los
-nombres reales de clases.
+`client/storage`, `mapper` y `util`). Prosa en español; diagramas en Mermaid con
+los nombres reales de clases. Los controladores dependen solo de servicios: no
+importan `repository/` ni `client/`.
 
 ## 1. Contexto
 
@@ -35,6 +36,8 @@ flowchart TB
     subgraph services [service]
       ProductSvc[ProductService<br/>list(owner, name)·create·update·deleteLogically]
       PublishSvc[ProductPublicationService<br/>publish·unpublish·publishCatalog]
+      ImageSvc[ProductImageService<br/>read(imageId)]
+      Lookup[ProductLookup<br/>findOwned(owner, id)]
     end
 
     subgraph repos [repository]
@@ -43,10 +46,11 @@ flowchart TB
     end
 
     subgraph domain [model]
-      Product[Product]
-      ProductImage[ProductImage]
-      Stage[ProductStage + Converter]
-      Curr[Currency]
+      Product[Product<br/>@Entity @Getter]
+      ProductImage[ProductImage<br/>@Entity @Getter]
+      Stage[ProductStage<br/>model/enums]
+      Converter[ProductStageConverter<br/>model/converters]
+      Curr[Currency<br/>model/enums]
     end
 
     subgraph storage [client/storage]
@@ -55,6 +59,8 @@ flowchart TB
     end
 
     Mapper[ProductResponseMapper]
+    Url[UrlUtils<br/>join(baseUrl, path)]
+    ImgContent[ProductImageContent<br/>model/dto]
     Errors[GlobalExceptionHandler]
     Config["config<br/>StorageProperties · CatalogProperties · StorageConfig<br/>@ConfigurationPropertiesScan"]
   end
@@ -67,24 +73,35 @@ flowchart TB
   Frontier -->|"POST/PUT multipart + ownerAccountId"| ProductCtrl
   Frontier -->|"publish/unpublish/publish catalog"| ProductCtrl
   Frontier -->|"GET list ?ownerAccountId=&name="| ProductCtrl
+  Frontier -->|"GET image"| ImageCtrl
   ProductCtrl --> ProductSvc
   ProductCtrl --> PublishSvc
-  ImageCtrl --> ImageRepo
-  ImageCtrl --> Storage
+  ImageCtrl --> ImageSvc
   ProductSvc --> ProductRepo
   ProductSvc --> ImageRepo
   ProductSvc --> Storage
   ProductSvc --> Mapper
+  ProductSvc --> Lookup
   PublishSvc --> ProductRepo
   PublishSvc --> ImageRepo
   PublishSvc --> Mapper
+  PublishSvc --> Lookup
+  Lookup --> ProductRepo
+  ImageSvc --> ImageRepo
+  ImageSvc --> Storage
+  ImageSvc --> ImgContent
   Storage -.implementa.-> Minio
   Minio -->|S3_*| MinioS3
   ProductRepo --> DB
   ImageRepo --> DB
+  Mapper --> Url
   Mapper --> CatalogProps[CatalogProperties<br/>PUBLIC_API_BASE_URL]
   Config --> Minio
 ```
+
+Nota: los controladores solo dependen de servicios (`ProductService`,
+`ProductPublicationService`, `ProductImageService`) y nunca importan
+`repository/` ni `client/`.
 
 Variables de entorno relevantes: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`,
 `S3_SECRET_KEY` (almacenamiento) y `PUBLIC_API_BASE_URL` (base de la URL pública
@@ -112,8 +129,7 @@ classDiagram
   }
 
   class ProductImageController {
-    -ProductImageRepository productImageRepository
-    -ImageStorage imageStorage
+    -ProductImageService productImageService
     +read(imageId) ResponseEntity~Resource~
   }
 
@@ -122,6 +138,7 @@ classDiagram
     -ProductImageRepository productImageRepository
     -ImageStorage imageStorage
     -ProductResponseMapper responseMapper
+    -ProductLookup productLookup
     +list(ownerAccountId, name) List~ProductResponse~
     +create(ownerAccountId, form) ProductResponse
     +update(ownerAccountId, id, form) ProductResponse
@@ -132,9 +149,21 @@ classDiagram
     -ProductRepository productRepository
     -ProductImageRepository productImageRepository
     -ProductResponseMapper responseMapper
+    -ProductLookup productLookup
     +publish(ownerAccountId, id) ProductResponse
     +unpublish(ownerAccountId, id) ProductResponse
     +publishCatalog(ownerAccountId, request) PublishCatalogResponse
+  }
+
+  class ProductImageService {
+    -ProductImageRepository productImageRepository
+    -ImageStorage imageStorage
+    +read(imageId) ProductImageContent
+  }
+
+  class ProductLookup {
+    -ProductRepository productRepository
+    +findOwned(ownerAccountId, id) Product
   }
 
   class ProductRepository {
@@ -206,13 +235,13 @@ classDiagram
   class ImageStorage {
     <<interface>>
     +store(productId, imageId, file) StoredImage
-    +load(objectKey) ImageContent
+    +load(objectKey) ProductImageContent
   }
   class MinioImageStorage {
     -MinioClient client
     -StorageProperties properties
     +store(productId, imageId, file) StoredImage
-    +load(objectKey) ImageContent
+    +load(objectKey) ProductImageContent
   }
   class StorageProperties {
     -String endpoint
@@ -227,6 +256,11 @@ classDiagram
   class ProductResponseMapper {
     -CatalogProperties catalogProperties
     +toResponse(product, images) ProductResponse
+  }
+
+  class UrlUtils {
+    <<utility>>
+    +join(baseUrl, path)$ String
   }
 
   class ProductResponse {
@@ -246,6 +280,11 @@ classDiagram
     <<record>>
     +UUID id
     +String url
+  }
+  class ProductImageContent {
+    <<record>>
+    +Resource resource
+    +String contentType
   }
   class ProductForm {
     <<record>>
@@ -283,16 +322,22 @@ classDiagram
 
   ProductController --> ProductService
   ProductController --> ProductPublicationService
-  ProductImageController --> ProductImageRepository
-  ProductImageController --> ImageStorage
+  ProductImageController --> ProductImageService
+  ProductImageService --> ProductImageRepository
+  ProductImageService --> ImageStorage
+  ProductImageService ..> ProductImageContent
   ProductService --> ProductRepository
   ProductService --> ProductImageRepository
   ProductService --> ImageStorage
   ProductService --> ProductResponseMapper
+  ProductService --> ProductLookup
   ProductPublicationService --> ProductRepository
   ProductPublicationService --> ProductImageRepository
   ProductPublicationService --> ProductResponseMapper
+  ProductPublicationService --> ProductLookup
+  ProductLookup --> ProductRepository
   ProductResponseMapper --> CatalogProperties
+  ProductResponseMapper --> UrlUtils
   ProductResponseMapper ..> ProductResponse
   ProductResponseMapper ..> ProductImageResponse
   ProductRepository ..> Product
@@ -300,6 +345,7 @@ classDiagram
   Product --> ProductStage
   Product --> Currency
   ProductStageConverter ..> ProductStage
+  ImageStorage ..> ProductImageContent
   MinioImageStorage ..|> ImageStorage
   MinioImageStorage --> StorageProperties
   GlobalExceptionHandler --> ProductNotFoundException
@@ -357,6 +403,7 @@ sequenceDiagram
   actor Panel as panel-api (frontera)
   participant Ctrl as ProductController
   participant Pub as ProductPublicationService
+  participant Lookup as ProductLookup
   participant Repo as ProductRepository
   participant ImgRepo as ProductImageRepository
   participant Product as Product
@@ -364,7 +411,8 @@ sequenceDiagram
 
   Panel->>Ctrl: POST /catalog/products/{id}/publish?ownerAccountId={cuenta}
   Ctrl->>Pub: publish(ownerAccountId, id)
-  Pub->>Repo: findByIdAndOwnerAccountIdAndDeletedAtIsNull(id, owner)
+  Pub->>Lookup: findOwned(ownerAccountId, id)
+  Lookup->>Repo: findByIdAndOwnerAccountIdAndDeletedAtIsNull(id, owner)
   alt producto inexistente o de otra cuenta
     Pub-->>Ctrl: ProductNotFoundException
     Ctrl-->>Panel: 404 {"error":"producto_no_encontrado"}

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import com.friendlyeshop.catalog.client.storage.ImageContent;
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import com.friendlyeshop.catalog.client.storage.ImageStorage;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.model.ProductImage;
@@ -34,7 +34,7 @@ class ProductImageServiceTest {
     void readsTheStoredImageContent() {
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, UUID.randomUUID(), "products/a/b", "image/png");
-        ImageContent expected = new ImageContent(new ByteArrayResource("bytes".getBytes()), "image/png");
+        ProductImageContent expected = new ProductImageContent(new ByteArrayResource("bytes".getBytes()), "image/png");
         when(productImageRepository.findById(imageId)).thenReturn(Optional.of(image));
         when(imageStorage.load("products/a/b")).thenReturn(expected);
 

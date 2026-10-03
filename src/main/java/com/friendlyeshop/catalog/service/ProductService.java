@@ -3,7 +3,6 @@ package com.friendlyeshop.catalog.service;
 import com.friendlyeshop.catalog.client.storage.ImageStorage;
 import com.friendlyeshop.catalog.client.storage.StoredImage;
 import com.friendlyeshop.catalog.exception.InvalidProductException;
-import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
@@ -32,12 +31,15 @@ public class ProductService {
 
     private final ProductResponseMapper responseMapper;
 
+    private final ProductLookup productLookup;
+
     public ProductService(ProductRepository productRepository, ProductImageRepository productImageRepository,
-            ImageStorage imageStorage, ProductResponseMapper responseMapper) {
+            ImageStorage imageStorage, ProductResponseMapper responseMapper, ProductLookup productLookup) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.imageStorage = imageStorage;
         this.responseMapper = responseMapper;
+        this.productLookup = productLookup;
     }
 
     @Transactional
@@ -64,7 +66,7 @@ public class ProductService {
     @Transactional
     public ProductResponse update(UUID ownerAccountId, UUID id, ProductForm form) {
         validateForm(form);
-        Product product = findOwnedProduct(ownerAccountId, id);
+        Product product = productLookup.findOwned(ownerAccountId, id);
         product.update(form.name(), form.price(), form.currency(), form.stock());
         List<ProductImage> images = new ArrayList<>(productImageRepository.findByProductId(product.getId()));
         images.addAll(storeImages(product.getId(), form.images()));
@@ -73,13 +75,8 @@ public class ProductService {
 
     @Transactional
     public void deleteLogically(UUID ownerAccountId, UUID id) {
-        Product product = findOwnedProduct(ownerAccountId, id);
+        Product product = productLookup.findOwned(ownerAccountId, id);
         product.deleteLogically(Instant.now());
-    }
-
-    private Product findOwnedProduct(UUID ownerAccountId, UUID id) {
-        return productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(id, ownerAccountId)
-                .orElseThrow(() -> new ProductNotFoundException("El producto no existe para la cuenta"));
     }
 
     private void validateForm(ProductForm form) {

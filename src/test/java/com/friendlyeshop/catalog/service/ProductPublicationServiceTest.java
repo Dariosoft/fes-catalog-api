@@ -43,7 +43,8 @@ class ProductPublicationServiceTest {
     @BeforeEach
     void setUp() {
         ProductResponseMapper mapper = new ProductResponseMapper(new CatalogProperties("https://api.fes.test"));
-        service = new ProductPublicationService(productRepository, productImageRepository, mapper);
+        service = new ProductPublicationService(productRepository, productImageRepository, mapper,
+                new ProductLookup(productRepository));
     }
 
     @Test

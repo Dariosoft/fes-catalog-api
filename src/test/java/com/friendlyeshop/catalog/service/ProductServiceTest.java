@@ -8,7 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.friendlyeshop.catalog.client.storage.ImageContent;
+import com.friendlyeshop.catalog.model.dto.ProductImageContent;
 import com.friendlyeshop.catalog.client.storage.ImageStorage;
 import com.friendlyeshop.catalog.client.storage.StoredImage;
 import com.friendlyeshop.catalog.config.CatalogProperties;
@@ -53,7 +53,8 @@ class ProductServiceTest {
     @BeforeEach
     void setUp() {
         ProductResponseMapper mapper = new ProductResponseMapper(new CatalogProperties("https://api.fes.test"));
-        service = new ProductService(productRepository, productImageRepository, imageStorage, mapper);
+        service = new ProductService(productRepository, productImageRepository, imageStorage, mapper,
+                new ProductLookup(productRepository));
     }
 
     @Test
@@ -207,7 +208,7 @@ class ProductServiceTest {
         }
 
         @Override
-        public ImageContent load(String objectKey) {
+        public ProductImageContent load(String objectKey) {
             throw new UnsupportedOperationException();
         }
     }
