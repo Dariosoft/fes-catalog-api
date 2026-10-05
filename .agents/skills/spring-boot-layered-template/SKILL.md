@@ -25,25 +25,28 @@ Use the basic folders for obvious cases:
 - `controller/`: HTTP endpoints, request-to-use-case conversion, response building.
 - `service/`: use cases, business orchestration, coordination between repositories, models, validations, and external clients.
 - `repository/`: persistence access.
-- `model/`: entities, value objects, and domain or application concepts.
+- `model/`: persistence entities (the database models).
 - `model/dto/`: transport objects that enter or leave through APIs, events, or external contracts.
+- `model/enums/`: enums used by models and DTOs.
+- `model/converters/`: converters (for example, JPA `AttributeConverter`) that map a model value to/from its stored representation.
 - `config/`: properties, beans, framework configuration, CORS, security, serializers, clients configured as infrastructure.
 - `exception/`: custom exceptions and error types.
+
+# Dependency Direction
+
+`controller/` never accesses `repository/`, JPA, or storage/API clients directly: it calls `service/` and builds the HTTP response. Persistence and external access live in `service/` (through `repository/` and `client/`). Repositories and clients are never injected into controllers.
+
+# Boilerplate: Lombok
+
+Use Lombok annotations instead of hand-written accessors: `@Getter` on classes that need read access (models), and `@Setter` only when a mutable setter is truly needed. Do not write manual `getX`/`setX` methods.
 
 # Allowed Extensions
 
 When the base structure falls short, infrastructure or protocol folders can be added, as long as they have a concrete and stable name.
 
-Avoid generic folders such as:
+Avoid generic dumping grounds such as `helper/`, `helpers/`, `common/`, `shared/`; use them only when there is no more precise responsibility.
 
-- `util/`
-- `utils/`
-- `helper/`
-- `helpers/`
-- `common/`
-- `shared/`
-
-Use them only when there is no more precise responsibility.
+`util/` (or `utils/`) is allowed for small, stateless, cross-cutting behaviors reused across the codebase — for example `util/UrlUtils` to join URLs. Give the class a specific name that expresses the behavior; never create a single `Utils` or `Constants` catch-all.
 
 # `client/`
 
@@ -179,11 +182,11 @@ Use names that express role and responsibility:
 
 Avoid ambiguous names:
 
-- `Utils`
 - `Helper`
 - `Manager`
 - `Processor`
 - `Handler` when there is no clear framework or pattern behind it
+- `Utils` when it is a catch-all; prefer a specific `*Utils` name (for example `UrlUtils`).
 
 # Class Boundaries
 
@@ -239,7 +242,9 @@ Before creating or moving a class, answer:
 - Does it repeatedly convert between representations? `mapper/`.
 - Does it validate a reusable rule? `validation/`.
 - Is it an input/output DTO? `model/dto/`.
-- Is it a domain/application concept? `model/`.
+- Is it an enum? `model/enums/`.
+- Does it convert a model value to or from its stored form? `model/converters/`.
+- Is it a domain/application concept? `model/` (persistence entity).
 
 # Minimum Change Rule
 
