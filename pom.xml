@@ -19,6 +19,9 @@
     <lombok.version>1.18.42</lombok.version>
     <minio.version>8.5.17</minio.version>
     <jacoco.version>0.8.15</jacoco.version>
+    <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+    <sonar.projectKey>Dariosoft_fes-catalog-api</sonar.projectKey>
+    <sonar.organization>dariosoft</sonar.organization>
   </properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
@@ -135,6 +138,11 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>${sonar-maven-plugin.version}</version>
       </plugin>
     </plugins>
   </build>
