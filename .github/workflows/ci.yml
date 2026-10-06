@@ -51,7 +51,7 @@ jobs:
         run: ./mvnw --batch-mode verify
 
       - name: SonarQube Cloud analysis
-        if: github.ref == 'refs/heads/main'
+        #if: github.ref == 'refs/heads/main'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./mvnw --batch-mode sonar:sonar
