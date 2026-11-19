@@ -20,6 +20,9 @@
 #
 # Dependency vulnerabilities are reported, not enforced yet: set exit-code to
 # '1' on the Trivy step to fail the job on HIGH or CRITICAL findings.
+#
+# Secrets are reported too. The local guard is the versioned pre-commit hook in
+# .githooks: enable it with `git config core.hooksPath .githooks`.
 name: CI
 
 on:
@@ -68,6 +71,16 @@ jobs:
           ignore-unfixed: true
           format: table
           exit-code: '0'
+
+      - name: Secret scan (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          format: table
+          exit-code: '0'
+          skip-dirs: target,.git
 
       - name: SonarQube Cloud analysis
         #if: github.ref == 'refs/heads/main'
