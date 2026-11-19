@@ -9,7 +9,8 @@ Persiste únicamente en la base `catalog`, usa Flyway para el esquema, RabbitMQ 
 - Tests: `./mvnw test`
 - Compilar y verificar: `./mvnw verify`
 - Cobertura: `./mvnw verify` genera `target/site/jacoco/jacoco.xml`, que SonarQube lee por defecto, y exige un mínimo de 90 % de líneas del bundle; requiere Docker para el test de Testcontainers.
-- SonarQube: `./mvnw sonar:sonar` con `SONAR_TOKEN` en el entorno; el `projectKey` y la organización están en `pom.xml`. En CI solo se ejecuta al publicar en `main`.
+- SonarQube: `./mvnw sonar:sonar` con `SONAR_TOKEN` en el entorno; el `projectKey` y la organización están en `pom.xml`. En CI se ejecuta en cada evento y falla si no pasa el Quality Gate.
+- SBOM: `./mvnw cyclonedx:makeBom` genera `target/bom.json`; el CI lo escanea con Trivy.
 - Lint: `./mvnw checkstyle:check`; también se ejecuta automáticamente en la fase `validate`.
 
 ## Estilo y convenciones

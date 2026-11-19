@@ -17,6 +17,9 @@
 # The SonarQube step runs for every event: the `if` that limited it to the main
 # branch is commented out. With sonar.qualitygate.wait the step waits for the
 # analysis to be processed and fails the job when the quality gate fails.
+#
+# Dependency vulnerabilities are reported, not enforced yet: set exit-code to
+# '1' on the Trivy step to fail the job on HIGH or CRITICAL findings.
 name: CI
 
 on:
@@ -51,6 +54,20 @@ jobs:
 
       - name: Build, Checkstyle, tests and coverage
         run: ./mvnw --batch-mode verify
+
+      - name: Generate SBOM
+        run: ./mvnw --batch-mode cyclonedx:makeBom
+
+      - name: Dependency vulnerability report (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: sbom
+          scan-ref: target/bom.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: '0'
 
       - name: SonarQube Cloud analysis
         #if: github.ref == 'refs/heads/main'
