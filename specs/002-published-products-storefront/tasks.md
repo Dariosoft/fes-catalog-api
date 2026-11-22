@@ -101,12 +101,12 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## API HTTP pública
 
-- [x] **T11. `PublishedProductController`**
+- [x] **T11. `PublishController`**
   - Cubre: RF-1, RF-14, NFR-1
-  - Crear `controller/PublishedProductController` con
+  - Crear `controller/PublishController` con
     `@RequestMapping("/catalog/products")` y `@GetMapping("/published")` que recibe
     `name`, `page` y `size` como `String` opcionales y delega en el servicio.
-  - Done when: `GET /catalog/products/published` responde 200 sin credenciales y
+  - Done when: `GET /catalog/publish` responde 200 sin credenciales y
     parámetros no numéricos no producen 400.
 
 ## CORS y configuración

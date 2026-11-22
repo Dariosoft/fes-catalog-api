@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.friendlyeshop.catalog.controller.PublishedProductController;
+import com.friendlyeshop.catalog.controller.PublishController;
 import com.friendlyeshop.catalog.model.dto.PublishedProductPageResponse;
+import com.friendlyeshop.catalog.service.ProductPublicationService;
 import com.friendlyeshop.catalog.service.PublishedProductService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PublishedProductController.class)
+@WebMvcTest(PublishController.class)
 @Import(CorsConfig.class)
 @TestPropertySource(properties = "fes.cors.browser-origins=https://shop.fes.test,https://admin.fes.test")
 class CorsConfigurationTest {
@@ -37,12 +38,15 @@ class CorsConfigurationTest {
     @MockitoBean
     private PublishedProductService publishedProductService;
 
+    @MockitoBean
+    private ProductPublicationService publicationService;
+
     @Test
     void allowsStorefrontOriginOnGet() throws Exception {
         when(publishedProductService.list(isNull(), isNull(), isNull()))
                 .thenReturn(new PublishedProductPageResponse(List.of(), 1, 24, 0, 0));
 
-        mockMvc.perform(get("/catalog/products/published").header(HttpHeaders.ORIGIN, STORE_ORIGIN))
+        mockMvc.perform(get("/catalog/publish").header(HttpHeaders.ORIGIN, STORE_ORIGIN))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, STORE_ORIGIN))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
@@ -50,7 +54,7 @@ class CorsConfigurationTest {
 
     @Test
     void answersPreflightWithGetMethod() throws Exception {
-        mockMvc.perform(options("/catalog/products/published")
+        mockMvc.perform(options("/catalog/publish")
                         .header(HttpHeaders.ORIGIN, STORE_ORIGIN)
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.GET.name()))
                 .andExpect(status().isOk())
@@ -61,7 +65,7 @@ class CorsConfigurationTest {
 
     @Test
     void doesNotAuthorizeForeignOrigins() throws Exception {
-        mockMvc.perform(get("/catalog/products/published").header(HttpHeaders.ORIGIN, FOREIGN_ORIGIN))
+        mockMvc.perform(get("/catalog/publish").header(HttpHeaders.ORIGIN, FOREIGN_ORIGIN))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 

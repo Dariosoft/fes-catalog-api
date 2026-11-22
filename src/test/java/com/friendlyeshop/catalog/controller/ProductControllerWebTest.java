@@ -10,19 +10,15 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.exception.StorageUnavailableException;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.model.dto.ProductForm;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.service.ProductPublicationService;
 import com.friendlyeshop.catalog.service.ProductService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -33,7 +29,6 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,9 +41,6 @@ class ProductControllerWebTest {
 
     @MockitoBean
     private ProductService productService;
-
-    @MockitoBean
-    private ProductPublicationService publicationService;
 
     @Test
     void listsProductsForAccount() throws Exception {
@@ -137,51 +129,6 @@ class ProductControllerWebTest {
     }
 
     @Test
-    void publishesProduct() throws Exception {
-        UUID owner = UUID.randomUUID();
-        UUID id = UUID.randomUUID();
-        when(publicationService.publish(owner, id)).thenReturn(response());
-
-        mockMvc.perform(post("/catalog/products/{id}/publish", id).param("ownerAccountId", owner.toString()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.stage").value("draft"));
-    }
-
-    @Test
-    void unpublishesProduct() throws Exception {
-        UUID owner = UUID.randomUUID();
-        UUID id = UUID.randomUUID();
-        when(publicationService.unpublish(owner, id)).thenReturn(response());
-
-        mockMvc.perform(post("/catalog/products/{id}/unpublish", id).param("ownerAccountId", owner.toString()))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void rejectsPublicationConflict() throws Exception {
-        UUID owner = UUID.randomUUID();
-        UUID id = UUID.randomUUID();
-        when(publicationService.publish(owner, id)).thenThrow(new InvalidProductException("sin dueño"));
-
-        mockMvc.perform(post("/catalog/products/{id}/publish", id).param("ownerAccountId", owner.toString()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("conflicto_de_publicacion"));
-    }
-
-    @Test
-    void publishesCatalog() throws Exception {
-        UUID owner = UUID.randomUUID();
-        when(publicationService.publishCatalog(eq(owner), any())).thenReturn(new PublishCatalogResponse(2));
-
-        mockMvc.perform(post("/catalog/publish")
-                        .param("ownerAccountId", owner.toString())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"products\":[{\"name\":\"Nuevo\",\"price\":8.00,\"currency\":\"USD\"}]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.published").value(2));
-    }
-
-    @Test
     void returnsNotFoundForUnknownProduct() throws Exception {
         UUID owner = UUID.randomUUID();
         UUID id = UUID.randomUUID();
@@ -203,19 +150,6 @@ class ProductControllerWebTest {
                         .param("currency", "ARS"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.error").value("almacenamiento_no_disponible"));
-    }
-
-    @Test
-    void publishesCatalogWithNoProducts() throws Exception {
-        UUID owner = UUID.randomUUID();
-        when(publicationService.publishCatalog(eq(owner), any())).thenReturn(new PublishCatalogResponse(0));
-
-        mockMvc.perform(post("/catalog/publish")
-                        .param("ownerAccountId", owner.toString())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.published").value(0));
     }
 
     private ProductResponse response() {

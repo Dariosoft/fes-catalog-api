@@ -43,8 +43,8 @@ contrato que ya usa el panel.
 ## Requisitos funcionales (criterios de aceptación en EARS)
 
 - RF-1: EL SISTEMA expondrá la lectura pública de productos publicados en
-  `GET /catalog/products/published`, accesible sin sesión ni credenciales.
-- RF-2: CUANDO se consulte `GET /catalog/products/published` sin filtro por nombre,
+  `GET /catalog/publish`, accesible sin sesión ni credenciales.
+- RF-2: CUANDO se consulte `GET /catalog/publish` sin filtro por nombre,
   EL SISTEMA devolverá los productos de todos los dueños, sin agrupar por dueño.
 - RF-3: EL SISTEMA incluirá en la lectura pública únicamente productos en etapa
   publicada.
@@ -52,7 +52,7 @@ contrato que ya usa el panel.
   estén en etapa publicada.
 - RF-5: EL SISTEMA incluirá en la lectura pública los productos cuyo stock no esté
   informado o sea mayor a cero.
-- RF-6: CUANDO se consulte `GET /catalog/products/published` con el parámetro
+- RF-6: CUANDO se consulte `GET /catalog/publish` con el parámetro
   `name`, EL SISTEMA devolverá únicamente los productos cuyo nombre contenga ese
   texto, sin distinguir mayúsculas de minúsculas.
 - RF-7: EL SISTEMA tratará como significativos los acentos y demás signos
@@ -102,9 +102,15 @@ contrato que ya usa el panel.
   rutas de Actuator ni ninguna otra.
 - RF-29: SI `BROWSER_ORIGINS` está vacía o ausente, ENTONCES EL SISTEMA arrancará
   sin permitir ningún origen de navegador y sin fallar el arranque.
-- RF-30: EL SISTEMA conservará sin cambios el contrato del panel
-  `GET /catalog/products?ownerAccountId=…` y todas las operaciones de escritura de
+- RF-30: EL SISTEMA conservará sin cambios el contrato de administración
+  `GET /catalog/products?ownerAccountId=…`, el alta, la edición y el borrado de
   productos.
+- RF-35: EL SISTEMA expondrá la publicación y despublicación de un producto en
+  `POST /catalog/publish/products/{id}` y `POST /catalog/publish/products/{id}/unpublish`,
+  y la publicación de catálogo en `POST /catalog/publish`.
+- RF-36: EL SISTEMA publicará todo controller bajo el prefijo `/catalog`, de modo que
+  cada controller declare solo el segmento propio de su recurso.
+- RF-37: EL SISTEMA mantendrá los endpoints de Actuator fuera del prefijo `/catalog`.
 - RF-31: EL SISTEMA no modificará el estado de ningún producto a causa de la
   lectura pública.
 - RF-32: EL SISTEMA conservará los endpoints de Actuator, health checks y métricas

@@ -11,7 +11,7 @@ dependen solo de servicios y nunca importan `repository/` ni `client/`.
 
 `catalog-api` es la fuente de verdad de productos, precios, stock e imágenes. Hasta
 la spec 001 solo ofrecía lecturas acotadas al dueño para el panel. Este corte agrega
-una lectura pública de solo lectura, `GET /catalog/products/published`, que el
+una lectura pública de solo lectura, `GET /catalog/publish`, que el
 navegador del Storefront (`fes-client-web`) consume sin sesión ni credenciales. La
 respuesta se limita a productos `published`, no borrados, con dueño y con
 `stock` no informado o mayor a 0, de todos los vendedores, con filtro opcional por nombre y paginación de
@@ -36,7 +36,7 @@ flowchart TB
     end
 
     subgraph controllers [controller]
-      PubCtrl["PublishedProductController<br/>GET /catalog/products/published"]
+      PubCtrl["PublishController<br/>/publish: lectura y publicación"]
       PanelCtrl["ProductController<br/>GET /catalog/products?ownerAccountId=<br/>(sin cambios)"]
     end
 
@@ -68,7 +68,7 @@ flowchart TB
     Minio[(MinIO / S3<br/>imágenes)]
   end
 
-  Browser -->|"GET /catalog/products/published?name=&page=&size="| CorsCfg
+  Browser -->|"GET /catalog/publish?name=&page=&size="| CorsCfg
   CorsCfg --> PubCtrl
   PanelCtrl --> PanelSvc
   PubCtrl --> PubSvc
@@ -110,7 +110,7 @@ import ni variable local.
 classDiagram
   direction TB
 
-  class PublishedProductController {
+  class PublishController {
     -PublishedProductService publishedProductService
     +list(name String, page String, size String) PublishedProductPageResponse
   }
@@ -220,7 +220,7 @@ classDiagram
     +join(baseUrl String, path String) String
   }
 
-  PublishedProductController --> PublishedProductService
+  PublishController --> PublishedProductService
   PublishedProductService --> ProductRepository
   PublishedProductService --> ProductImageRepository
   PublishedProductService --> ProductResponseMapper
@@ -267,14 +267,14 @@ sequenceDiagram
   autonumber
   participant B as Navegador (Storefront)
   participant CFG as CorsConfig
-  participant C as PublishedProductController
+  participant C as PublishController
   participant S as PublishedProductService
   participant R as ProductRepository
   participant IR as ProductImageRepository
   participant M as ProductResponseMapper
   participant DB as PostgreSQL (catalog)
 
-  B->>CFG: GET /catalog/products/published?name=cafe&page=9&size=24<br/>Origin: https://tienda.example
+  B->>CFG: GET /catalog/publish?name=cafe&page=9&size=24<br/>Origin: https://tienda.example
   CFG->>CFG: origen ∈ fes.cors.browser-origins
   CFG->>C: acceso permitido
   C->>S: list("cafe", "9", "24")
@@ -313,19 +313,19 @@ sequenceDiagram
   autonumber
   participant B as Navegador (Storefront)
   participant CFG as CorsConfig (/catalog/**)
-  participant C as PublishedProductController
+  participant C as PublishController
   participant A as Actuator (/actuator/**)
 
   rect rgb(232, 244, 233)
-    B->>CFG: OPTIONS /catalog/products/published<br/>Origin: https://tienda.example<br/>Access-Control-Request-Method: GET
+    B->>CFG: OPTIONS /catalog/publish<br/>Origin: https://tienda.example<br/>Access-Control-Request-Method: GET
     CFG-->>B: 200 · Access-Control-Allow-Origin: https://tienda.example<br/>Access-Control-Allow-Methods: GET<br/>(sin Access-Control-Allow-Credentials)
-    B->>CFG: GET /catalog/products/published
+    B->>CFG: GET /catalog/publish
     CFG->>C: solicitud autorizada
     C-->>B: 200 JSON · Access-Control-Allow-Origin: https://tienda.example
   end
 
   rect rgb(250, 235, 235)
-    B->>CFG: GET /catalog/products/published<br/>Origin: https://sitio-ajeno.example
+    B->>CFG: GET /catalog/publish<br/>Origin: https://sitio-ajeno.example
     CFG->>C: solicitud procesada
     C-->>B: 200 JSON · sin cabeceras CORS
     Note over B: el navegador bloquea la lectura<br/>y no es un error del servidor
