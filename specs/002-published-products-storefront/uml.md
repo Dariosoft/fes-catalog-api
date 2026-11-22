@@ -14,7 +14,7 @@ la spec 001 solo ofrecía lecturas acotadas al dueño para el panel. Este corte 
 una lectura pública de solo lectura, `GET /catalog/products/published`, que el
 navegador del Storefront (`fes-client-web`) consume sin sesión ni credenciales. La
 respuesta se limita a productos `published`, no borrados, con dueño y con
-`stock > 0`, de todos los vendedores, con filtro opcional por nombre y paginación de
+`stock` no informado o mayor a 0, de todos los vendedores, con filtro opcional por nombre y paginación de
 24 por defecto. El acceso desde el navegador se habilita con CORS restringido a
 `/catalog/**` y a los orígenes de la variable `BROWSER_ORIGINS`. El contrato del
 panel y los endpoints de Actuator no cambian.
@@ -280,7 +280,7 @@ sequenceDiagram
   C->>S: list("cafe", "9", "24")
   S->>S: size=24, page=9, name="cafe"
   S->>R: findPublishedByName(PUBLISHED, 0, "cafe", PageRequest(8, 24, createdAt desc, id asc))
-  R->>DB: select ... where stage='published' and deleted_at is null<br/>and owner_account_id is not null and stock > 0<br/>and lower(name) like '%cafe%' order by created_at desc, id asc limit 24 offset 192
+  R->>DB: select ... where stage='published' and deleted_at is null<br/>and owner_account_id is not null<br/>and (stock is null or stock > 0)<br/>and lower(name) like '%cafe%' order by created_at desc, id asc limit 24 offset 192
   DB-->>R: 0 filas · totalElements 30 · totalPages 2
   R-->>S: Page (totalPages = 2)
   S->>S: page 9 supera totalPages 2 → reconsultar en 1
@@ -303,8 +303,8 @@ Casos cubiertos por el mismo flujo:
 - `name` ausente o en blanco → `findPublished` en lugar de `findPublishedByName`.
 - `totalItems` 0 → `items` vacío, `totalItems` 0, `totalPages` 0, sin reconsultar.
 - `size` 150 → se aplica 100; `page` `abc` o `0` → se aplica 1.
-- Producto publicado sin dueño, borrado, en borrador o con stock nulo/cero/negativo
-  nunca aparece: queda filtrado en la consulta SQL.
+- Producto publicado sin dueño, borrado, en borrador o con stock cero/negativo nunca
+  aparece: queda filtrado en la consulta SQL. El stock no informado sí se muestra.
 
 ## 5. Secuencia — verificación previa CORS y origen no permitido
 

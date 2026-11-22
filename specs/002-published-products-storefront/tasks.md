@@ -22,10 +22,12 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 - [x] **T2. `ProductRepository.findPublished`**
   - Cubre: RF-2, RF-3, RF-4, RF-5, RF-23, RF-33
   - Agregar la consulta JPQL con `@Query` que filtra `stage = :stage`,
-    `deletedAt is null`, `ownerAccountId is not null` y `stock > :minimumStock`,
+    `deletedAt is null`, `ownerAccountId is not null` y
+    `stock is null or stock > :minimumStock`,
     devolviendo `Page<Product>`. Documentar que el orden llega por `Pageable`.
   - Done when: la consulta compila, arranca con `ddl-auto: validate` y un test de
-    integración devuelve solo publicados, no borrados, con dueño y stock positivo.
+    integración devuelve solo publicados, no borrados, con dueño y con stock positivo o
+    no informado.
 
 - [x] **T3. `ProductRepository.findPublishedByName`**
   - Cubre: RF-6, RF-7
@@ -168,7 +170,8 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 - [x] **T19. Tests de integración JPA**
   - Cubre: RF-2, RF-3, RF-4, RF-5, RF-6, RF-7, RF-23, RF-33
   - Ampliar `ProductRepositoryIntegrationTest` con `@DataJpaTest` y Testcontainers:
-    publicados/no borrados/con dueño/stock positivo, exclusión de nulo/cero/negativo,
+    publicados/no borrados/con dueño/stock positivo o no informado, exclusión de
+    cero/negativo,
     borrador, despublicado y sin dueño, filtro case-insensitive, acentos
     significativos y orden `createdAt` desc + `id` asc estable entre páginas.
   - Done when: la suite de integración aplica V1 en limpio y valida todas las

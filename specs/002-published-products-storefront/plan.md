@@ -21,8 +21,8 @@ dependencias ni tablas: el esquema de la spec 001 ya contiene lo necesario.
   escrituras; la lectura pública es un endpoint nuevo, no un parámetro del existente.
   **(RF-30, NFR-7)**
 - La selección aplica cuatro condiciones simultáneas: etapa `published`,
-  `deleted_at IS NULL`, `owner_account_id IS NOT NULL` y `stock > 0`. **(RF-3,
-  RF-4, RF-5, RF-33)**
+  `deleted_at IS NULL`, `owner_account_id IS NOT NULL` y `stock IS NULL OR stock > 0`.
+  **(RF-3, RF-4, RF-5, RF-33)**
 - La respuesta nunca expone `ownerAccountId`, `stage`, `createdAt` ni `updatedAt`.
   **(RF-17)**
 - Los parámetros `page` y `size` **se ajustan, nunca rechazan**: no producen 400.
@@ -205,7 +205,7 @@ resultarían ilegibles por la cantidad de condiciones):
         where p.stage = :stage
           and p.deletedAt is null
           and p.ownerAccountId is not null
-          and p.stock > :minimumStock
+          and (p.stock is null or p.stock > :minimumStock)
         """)
 Page<Product> findPublished(
         @Param("stage") ProductStage stage,
@@ -217,7 +217,7 @@ Page<Product> findPublished(
         where p.stage = :stage
           and p.deletedAt is null
           and p.ownerAccountId is not null
-          and p.stock > :minimumStock
+          and (p.stock is null or p.stock > :minimumStock)
           and lower(p.name) like lower(concat('%', :name, '%'))
         """)
 Page<Product> findPublishedByName(
@@ -229,8 +229,8 @@ Page<Product> findPublishedByName(
 
 - `stage = published` incluye solo publicados. **(RF-3)**
 - `deletedAt is null` excluye borrados lógicos. **(RF-4)**
-- `stock > 0` excluye nulo, cero y negativos (en SQL, `NULL > 0` no es verdadero).
-  **(RF-5)**
+- `stock is null or stock > 0` incluye el stock no informado y excluye cero y
+  negativos (en SQL, `NULL > 0` no es verdadero). **(RF-5)**
 - `ownerAccountId is not null` excluye publicados sin dueño. **(RF-33)**
 - Sin filtro por dueño: devuelve todos los vendedores, sin agrupar. **(RF-2)**
 - Orden: `Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id"))`, pasado en el
@@ -443,7 +443,7 @@ fes:
 | `PublishedProductControllerWebTest` (MockMvc) | 200 con `items/page/size/totalItems/totalPages`; paso de `name`, `page` y `size`; parámetros no numéricos no producen 400; sin dueño ni etapa en el JSON | RF-1, RF-6, RF-9 … RF-17, RF-22 |
 | `CorsConfigurationTest` (MockMvc) | `GET /catalog/**` con origen permitido recibe `Access-Control-Allow-Origin`; `OPTIONS` preflight con `GET`; origen ajeno sin cabeceras; `/actuator/health` sin CORS; `BROWSER_ORIGINS` vacía arranca sin orígenes; sin `Allow-Credentials` | RF-24 … RF-29 |
 | `CorsPropertiesTest` | Binding de lista separada por comas; vacío/ausente → lista vacía; recorte y descarte de blancos | RF-29, NFR-2 |
-| `ProductRepositoryIntegrationTest` (Testcontainers PostgreSQL) | Solo publicados, no borrados, con dueño y `stock > 0`; excluye nulo/cero/negativo, borrado, borrador, despublicado y sin dueño; filtro por nombre con mayúsculas distintas y con acentos distintos; orden `createdAt` desc + `id` asc estable entre páginas | RF-2 … RF-7, RF-23, RF-33 |
+| `ProductRepositoryIntegrationTest` (Testcontainers PostgreSQL) | Solo publicados, no borrados, con dueño y `stock is null or stock > 0`; incluye stock no informado y excluye cero/negativo, borrado, borrador, despublicado y sin dueño; filtro por nombre con mayúsculas distintas y con acentos distintos; orden `createdAt` desc + `id` asc estable entre páginas | RF-2 … RF-7, RF-23, RF-33 |
 | `ProductControllerWebTest` y `ActuatorConfigurationTest` (existentes) | El contrato del panel y Actuator siguen verdes | RF-30, RF-32, NFR-5 |
 
 - Unitarios: servicio y mapper con repositorios mock.
@@ -471,7 +471,7 @@ fes:
 | RF-2 | `findPublished` sin filtro por dueño |
 | RF-3 | Condición `p.stage = published` |
 | RF-4 | Condición `p.deletedAt is null` |
-| RF-5 | Condición `p.stock > 0` |
+| RF-5 | Condición `p.stock is null or p.stock > 0` |
 | RF-6 | `findPublishedByName` con `lower(...) like lower(...)` |
 | RF-7 | Test de acentos significativos (sin normalización) |
 | RF-8 | `name` recortado a `null` cuando está en blanco |

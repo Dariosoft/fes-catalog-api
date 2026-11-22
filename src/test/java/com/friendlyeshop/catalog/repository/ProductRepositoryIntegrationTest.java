@@ -139,11 +139,11 @@ class ProductRepositoryIntegrationTest {
         Product draft = Product.openNew(owner, "Borrador", new BigDecimal("10.00"), Currency.ARS, 5);
         Product deleted = publishedProduct(owner, "Borrado", 5);
         deleted.deleteLogically(Instant.now());
-        Product nullStock = publishedProduct(owner, "Sin stock nulo", null);
+        Product withoutStock = publishedProduct(owner, "Sin stock informado", null);
         Product zeroStock = publishedProduct(owner, "Sin stock cero", 0);
         Product withoutOwner = publishedProduct(owner, "Sin duenio", 4);
         productRepository.saveAllAndFlush(
-                List.of(visible, otherVendor, draft, deleted, nullStock, zeroStock, withoutOwner));
+                List.of(visible, otherVendor, draft, deleted, withoutStock, zeroStock, withoutOwner));
         entityManager.createNativeQuery("update products set owner_account_id = null where id = :id")
                 .setParameter("id", withoutOwner.getId())
                 .executeUpdate();
@@ -154,7 +154,7 @@ class ProductRepositoryIntegrationTest {
                 .getContent();
 
         assertThat(result).extracting(Product::getName)
-                .containsExactlyInAnyOrder("Visible", "Otro vendedor");
+                .containsExactlyInAnyOrder("Visible", "Otro vendedor", "Sin stock informado");
     }
 
     @SuppressWarnings("null")
@@ -245,7 +245,8 @@ class ProductRepositoryIntegrationTest {
 
         List<Object> expectedOrder = entityManager.createNativeQuery("""
                 select id from products
-                where stage = 'published' and deleted_at is null and owner_account_id is not null and stock > 0
+                where stage = 'published' and deleted_at is null and owner_account_id is not null
+                  and (stock is null or stock > 0)
                 order by created_at desc, id asc
                 """).getResultList();
         List<String> pagedOrder = Stream.concat(firstPage.stream(), secondPage.stream())

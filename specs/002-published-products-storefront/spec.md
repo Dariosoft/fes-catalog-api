@@ -8,7 +8,8 @@ para el panel y sin ninguna lectura global. El Storefront público necesita most
 todos los productos que los vendedores publicaron, en una sola grilla paginada, con
 un buscador por nombre siempre visible en el header. Este corte agrega esa lectura
 pública: devuelve únicamente productos en etapa publicada, no borrados, con dueño y
-con stock mayor a cero, de todos los dueños y sin agrupar, con filtro opcional por
+con stock mayor a cero o sin stock informado, de todos los dueños y sin agrupar, con
+filtro opcional por
 nombre y paginación, y habilita al navegador del Storefront a consumirla mediante
 CORS. El objetivo es que el catálogo sea visible para cualquier visitante sin
 sesión, sin exponer datos internos del vendedor (dueño ni etapa) y sin tocar el
@@ -49,8 +50,8 @@ contrato que ya usa el panel.
   publicada.
 - RF-4: EL SISTEMA excluirá de la lectura pública los productos borrados aunque
   estén en etapa publicada.
-- RF-5: EL SISTEMA excluirá de la lectura pública los productos cuyo stock sea nulo,
-  cero o menor a cero.
+- RF-5: EL SISTEMA incluirá en la lectura pública los productos cuyo stock no esté
+  informado o sea mayor a cero.
 - RF-6: CUANDO se consulte `GET /catalog/products/published` con el parámetro
   `name`, EL SISTEMA devolverá únicamente los productos cuyo nombre contenga ese
   texto, sin distinguir mayúsculas de minúsculas.
@@ -140,7 +141,8 @@ contrato que ya usa el panel.
 - Filtro `name` con distinto uso de mayúsculas: devuelve las mismas coincidencias.
 - Filtro `name` con acentos distintos del nombre almacenado: no coincide.
 - Filtro `name` vacío o solo con espacios: se comporta como consulta sin filtro.
-- Producto publicado con stock nulo: excluido de la lectura pública.
+- Producto publicado con stock no informado (nulo): incluido en la lectura pública
+  (RF-5).
 - Producto publicado con stock igual a cero: excluido de la lectura pública.
 - Producto publicado con stock menor a cero: excluido de la lectura pública.
 - Producto borrado lógicamente: excluido aunque conserve la etapa publicada.
@@ -193,7 +195,7 @@ contrato que ya usa el panel.
 - `./mvnw verify` en verde, incluido Checkstyle.
 - Demo manual: consultar la lectura pública con y sin `name`, recorrer al menos dos
   páginas de 24 y verificar que solo aparecen productos publicados, con dueño, no
-  borrados y con stock mayor a cero.
+  borrados y con stock mayor a cero o sin stock informado.
 - Demo manual de paginación: una consulta con `page` mayor a `totalPages` devuelve la
   última página disponible y una consulta con `size` mayor a 100 devuelve como
   máximo 100 elementos.

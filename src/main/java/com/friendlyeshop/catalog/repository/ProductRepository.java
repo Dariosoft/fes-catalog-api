@@ -31,7 +31,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             where p.stage = :stage
               and p.deletedAt is null
               and p.ownerAccountId is not null
-              and p.stock > :minimumStock
+              and (p.stock is null or p.stock > :minimumStock)
             """)
     Page<Product> findPublished(
             @Param("stage") ProductStage stage,
@@ -47,7 +47,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             where p.stage = :stage
               and p.deletedAt is null
               and p.ownerAccountId is not null
-              and p.stock > :minimumStock
+              and (p.stock is null or p.stock > :minimumStock)
               and lower(p.name) like lower(concat('%', :name, '%'))
             """)
     Page<Product> findPublishedByName(
