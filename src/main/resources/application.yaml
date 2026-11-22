@@ -27,6 +27,8 @@ fes:
     secret-key: ${S3_SECRET_KEY}
   catalog:
     public-base-url: ${PUBLIC_API_BASE_URL}
+  cors:
+    browser-origins: ${BROWSER_ORIGINS:}
 management:
   endpoints:
     web:

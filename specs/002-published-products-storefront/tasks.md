@@ -8,7 +8,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## Contrato y datos base
 
-- [ ] **T1. DTOs de lectura pública en `model/dto/`**
+- [x] **T1. DTOs de lectura pública en `model/dto/`**
   - Cubre: RF-14, RF-15, RF-16, RF-17
   - Crear `PublishedProductResponse(UUID id, String name, BigDecimal price,
     Currency currency, Integer stock, List<ProductImageResponse> images)` y
@@ -19,7 +19,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
     serialización confirma las claves `items`, `page`, `size`, `totalItems`,
     `totalPages` e `images[].id`/`images[].url`.
 
-- [ ] **T2. `ProductRepository.findPublished`**
+- [x] **T2. `ProductRepository.findPublished`**
   - Cubre: RF-2, RF-3, RF-4, RF-5, RF-23, RF-33
   - Agregar la consulta JPQL con `@Query` que filtra `stage = :stage`,
     `deletedAt is null`, `ownerAccountId is not null` y `stock > :minimumStock`,
@@ -27,14 +27,14 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: la consulta compila, arranca con `ddl-auto: validate` y un test de
     integración devuelve solo publicados, no borrados, con dueño y stock positivo.
 
-- [ ] **T3. `ProductRepository.findPublishedByName`**
+- [x] **T3. `ProductRepository.findPublishedByName`**
   - Cubre: RF-6, RF-7
   - Agregar la variante con `lower(p.name) like lower(concat('%', :name, '%'))`
     manteniendo el resto de las condiciones de T2.
   - Done when: un test de integración muestra que mayúsculas distintas coinciden y
     que un nombre con acentos distintos no coincide.
 
-- [ ] **T4. Consulta batch de imágenes `findByProductIdIn`**
+- [x] **T4. Consulta batch de imágenes `findByProductIdIn`**
   - Cubre: RF-16, RF-19
   - Agregar `List<ProductImage> findByProductIdIn(Collection<UUID> productIds)` a
     `ProductImageRepository` para cargar las imágenes de una página en una sola
@@ -44,7 +44,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## Mapeo público
 
-- [ ] **T5. `ProductResponseMapper.toPublishedResponse`**
+- [x] **T5. `ProductResponseMapper.toPublishedResponse`**
   - Cubre: RF-15, RF-16, RF-17, RF-18, RF-19, NFR-6
   - Agregar el método que arma `PublishedProductResponse` y reutiliza
     `toImageResponse`/`UrlUtils.join` para `images[].url`; sin imágenes devolver
@@ -52,7 +52,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: el test del mapper verifica el shape público, la URL pública con la
     base normalizada y la lista vacía cuando no hay imágenes.
 
-- [ ] **T6. `ProductResponseMapper.toPublishedPage`**
+- [x] **T6. `ProductResponseMapper.toPublishedPage`**
   - Cubre: RF-14, RF-20, RF-21, RF-22, RF-23
   - Agregar el método que compone `PublishedProductPageResponse` a partir de la lista
     de productos, el `Map<UUID, List<ProductImage>>` y los totales, conservando el
@@ -62,7 +62,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## Servicio
 
-- [ ] **T7. Normalización de `page` y `size`**
+- [x] **T7. Normalización de `page` y `size`**
   - Cubre: RF-9, RF-10, RF-11, RF-12, RF-13
   - En `PublishedProductService`, parsear ambos parámetros desde `String` con
     `try/catch` de `NumberFormatException`; valores nulos, vacíos, no numéricos o
@@ -71,7 +71,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: los tests unitarios cubren `null`, `""`, `"abc"`, `"0"`, `"-3"`,
     `"101"` y valores válidos sin lanzar excepción.
 
-- [ ] **T8. Consulta base, orden y totales**
+- [x] **T8. Consulta base, orden y totales**
   - Cubre: RF-2, RF-3, RF-4, RF-5, RF-14, RF-20, RF-21, RF-23, RF-31, RF-33
   - Implementar `list(name, page, size)` con `@Transactional(readOnly = true)`:
     `PageRequest.of(page - 1, size, Sort.by(Order.desc("createdAt"),
@@ -80,7 +80,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: el test unitario verifica el `PageRequest` recibido (página, tamaño y
     orden), los totales devueltos y que no se invoca ningún método de escritura.
 
-- [ ] **T9. Ajuste de página fuera de rango y resultado vacío**
+- [x] **T9. Ajuste de página fuera de rango y resultado vacío**
   - Cubre: RF-22, RF-34
   - Si `totalPages > 0` y `page > totalPages`, repetir la consulta con
     `PageRequest.of(totalPages - 1, size, SORT)` y responder con
@@ -89,7 +89,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: los tests cubren página 5 con 2 páginas reales (devuelve la 2 y los
     totales reales) y catálogo vacío (0/0 sin excepción).
 
-- [ ] **T10. Filtro por nombre**
+- [x] **T10. Filtro por nombre**
   - Cubre: RF-6, RF-7, RF-8
   - Recortar `name`, convertirlo en `null` cuando queda vacío y elegir
     `findPublishedByName` o `findPublished` según corresponda; sin normalizar
@@ -99,7 +99,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## API HTTP pública
 
-- [ ] **T11. `PublishedProductController`**
+- [x] **T11. `PublishedProductController`**
   - Cubre: RF-1, RF-14, NFR-1
   - Crear `controller/PublishedProductController` con
     `@RequestMapping("/catalog/products")` y `@GetMapping("/published")` que recibe
@@ -109,7 +109,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## CORS y configuración
 
-- [ ] **T12. `CorsProperties` y `application.yaml`**
+- [x] **T12. `CorsProperties` y `application.yaml`**
   - Cubre: RF-29, NFR-2
   - Crear el record `@ConfigurationProperties(prefix = "fes.cors")` con
     `List<String> browserOrigins` normalizado (recorte, descarte de blancos, vacío
@@ -118,7 +118,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: con `BROWSER_ORIGINS` ausente, vacía, con espacios y con varios
     orígenes el binding resuelve y la app arranca.
 
-- [ ] **T13. `CorsConfig` sobre `/catalog/**`**
+- [x] **T13. `CorsConfig` sobre `/catalog/**`**
   - Cubre: RF-24, RF-25, RF-26, RF-27, RF-28
   - Implementar `WebMvcConfigurer#addCorsMappings` con mapping `/catalog/**`,
     `allowedOrigins` desde `CorsProperties`, `allowedMethods("GET")`,
@@ -127,7 +127,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
     las cabeceras CORS, un origen ajeno no las recibe y `/actuator/health` queda sin
     CORS.
 
-- [ ] **T14. Documentar `BROWSER_ORIGINS` en `.env.sample`**
+- [x] **T14. Documentar `BROWSER_ORIGINS` en `.env.sample`**
   - Cubre: NFR-2
   - Agregar la variable con un origen local de ejemplo y una nota de que vacío
     significa ningún origen permitido.
@@ -136,20 +136,20 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## Pruebas y cierre
 
-- [ ] **T15. Tests unitarios de paginación y totales**
+- [x] **T15. Tests unitarios de paginación y totales**
   - Cubre: RF-9, RF-10, RF-11, RF-12, RF-13, RF-14, RF-20, RF-21, RF-22, RF-34
   - Cubrir `PublishedProductService` con repositorios mock: defaults, recorte de
     `size`, página fuera de rango, resultado vacío, totales y orden del `PageRequest`.
   - Done when: la suite unitaria pasa y no depende de base ni de red.
 
-- [ ] **T16. Tests unitarios de filtro, mapper e imágenes**
+- [x] **T16. Tests unitarios de filtro, mapper e imágenes**
   - Cubre: RF-6, RF-7, RF-8, RF-15, RF-16, RF-17, RF-18, RF-19, NFR-6
   - Cubrir la elección de consulta con y sin `name`, el shape público del mapper y la
     URL de imagen con la base normalizada.
   - Done when: los tests de `PublishedProductService` y `ProductResponseMapper`
     pasan en verde.
 
-- [ ] **T17. Tests web del endpoint público**
+- [x] **T17. Tests web del endpoint público**
   - Cubre: RF-1, RF-6, RF-9, RF-10, RF-11, RF-12, RF-13, RF-14, RF-15, RF-16,
     RF-17, RF-22, RF-34
   - `@WebMvcTest` con `MockMvc`: JSON con `items/page/size/totalItems/totalPages`,
@@ -157,7 +157,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
     sin 400, arreglo `images` vacío.
   - Done when: cada caso del endpoint tiene un test con estado y cuerpo esperados.
 
-- [ ] **T18. Tests de CORS y propiedades**
+- [x] **T18. Tests de CORS y propiedades**
   - Cubre: RF-24, RF-25, RF-26, RF-27, RF-28, RF-29, NFR-2
   - Verificar `Access-Control-Allow-Origin` con origen permitido, preflight
     `OPTIONS` con `GET`, ausencia de cabeceras con origen ajeno o lista vacía,
@@ -165,7 +165,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Done when: los tests de `CorsConfig` y `CorsProperties` pasan y cubren la lista
     vacía sin fallar el arranque.
 
-- [ ] **T19. Tests de integración JPA**
+- [x] **T19. Tests de integración JPA**
   - Cubre: RF-2, RF-3, RF-4, RF-5, RF-6, RF-7, RF-23, RF-33
   - Ampliar `ProductRepositoryIntegrationTest` con `@DataJpaTest` y Testcontainers:
     publicados/no borrados/con dueño/stock positivo, exclusión de nulo/cero/negativo,
