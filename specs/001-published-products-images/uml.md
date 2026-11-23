@@ -35,7 +35,7 @@ flowchart TB
 
     subgraph services [service]
       ProductSvc[ProductService<br/>list(owner, name)·create·update·deleteLogically]
-      PublishSvc[ProductPublicationService<br/>publish·unpublish·publishCatalog]
+      PublishSvc[PublicationService<br/>publish·unpublish·publishCatalog]
       ImageSvc[ProductImageService<br/>read(imageId)]
       Lookup[ProductLookup<br/>findOwned(owner, id)]
     end
@@ -100,7 +100,7 @@ flowchart TB
 ```
 
 Nota: los controladores solo dependen de servicios (`ProductService`,
-`ProductPublicationService`, `ProductImageService`) y nunca importan
+`PublicationService`, `ProductImageService`) y nunca importan
 `repository/` ni `client/`.
 
 Variables de entorno relevantes: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`,
@@ -118,7 +118,7 @@ classDiagram
 
   class ProductController {
     -ProductService productService
-    -ProductPublicationService publicationService
+    -PublicationService publicationService
     +list(ownerAccountId, name) List~ProductResponse~
     +create(ownerAccountId?, form) ProductResponse
     +update(ownerAccountId, id, form) ProductResponse
@@ -145,7 +145,7 @@ classDiagram
     +deleteLogically(ownerAccountId, id) void
   }
 
-  class ProductPublicationService {
+  class PublicationService {
     -ProductRepository productRepository
     -ProductImageRepository productImageRepository
     -ProductResponseMapper responseMapper
@@ -294,7 +294,7 @@ classDiagram
     +Integer stock
     +List~MultipartFile~ images
   }
-  class PublishCatalogItem {
+  class Publication {
     <<record>>
     +String name
     +BigDecimal price
@@ -303,7 +303,7 @@ classDiagram
   }
   class PublishCatalogRequest {
     <<record>>
-    +List~PublishCatalogItem~ products
+    +List~Publication~ products
   }
   class PublishCatalogResponse {
     <<record>>
@@ -321,7 +321,7 @@ classDiagram
   class StorageUnavailableException
 
   ProductController --> ProductService
-  ProductController --> ProductPublicationService
+  ProductController --> PublicationService
   ProductImageController --> ProductImageService
   ProductImageService --> ProductImageRepository
   ProductImageService --> ImageStorage
@@ -331,10 +331,10 @@ classDiagram
   ProductService --> ImageStorage
   ProductService --> ProductResponseMapper
   ProductService --> ProductLookup
-  ProductPublicationService --> ProductRepository
-  ProductPublicationService --> ProductImageRepository
-  ProductPublicationService --> ProductResponseMapper
-  ProductPublicationService --> ProductLookup
+  PublicationService --> ProductRepository
+  PublicationService --> ProductImageRepository
+  PublicationService --> ProductResponseMapper
+  PublicationService --> ProductLookup
   ProductLookup --> ProductRepository
   ProductResponseMapper --> CatalogProperties
   ProductResponseMapper --> UrlUtils
@@ -402,7 +402,7 @@ la etapa si falta alguno.
 sequenceDiagram
   actor Panel as panel-api (frontera)
   participant Ctrl as ProductController
-  participant Pub as ProductPublicationService
+  participant Pub as PublicationService
   participant Lookup as ProductLookup
   participant Repo as ProductRepository
   participant ImgRepo as ProductImageRepository
@@ -442,7 +442,7 @@ asociados a la cuenta. Sin productos por publicar, responde 0 sin error.
 sequenceDiagram
   actor Panel as panel-api (frontera)
   participant Ctrl as ProductController
-  participant Pub as ProductPublicationService
+  participant Pub as PublicationService
   participant Repo as ProductRepository
   participant Product as Product
 
