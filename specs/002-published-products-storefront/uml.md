@@ -11,7 +11,7 @@ dependen solo de servicios y nunca importan `repository/` ni `client/`.
 
 `catalog-api` es la fuente de verdad de productos, precios, stock e imágenes. Hasta
 la spec 001 solo ofrecía lecturas acotadas al dueño para el panel. Este corte agrega
-una lectura pública de solo lectura, `GET /catalog/publish`, que el
+una lectura pública de solo lectura, `GET /catalog/publication`, que el
 navegador del Storefront (`fes-client-web`) consume sin sesión ni credenciales. La
 respuesta se limita a productos `published`, no borrados, con dueño y con
 `stock` no informado o mayor a 0, de todos los vendedores, con filtro opcional por nombre y paginación de
@@ -36,13 +36,13 @@ flowchart TB
     end
 
     subgraph controllers [controller]
-      PubCtrl["PublishController<br/>/publish: lectura y publicación"]
+      PubCtrl["PublicationController<br/>/publication: lectura y publicación"]
       PanelCtrl["ProductController<br/>GET /catalog/products?ownerAccountId=<br/>(sin cambios)"]
     end
 
     subgraph services [service]
-      PubSvc["PublishedProductService<br/>list(name, page, size)<br/>@Transactional(readOnly=true)"]
-      PanelSvc["ProductService / ProductPublicationService<br/>(sin cambios)"]
+      PubSvc["PublicationService<br/>list / publish / unpublish / publishCatalog"]
+      PanelSvc["ProductService<br/>(sin cambios)"]
     end
 
     subgraph repos [repository]
@@ -53,12 +53,12 @@ flowchart TB
     subgraph modelPkg [model]
       Product[Product<br/>@Entity]
       ProductImage[ProductImage<br/>@Entity]
-      PageDto["PublishedProductPageResponse<br/>model/dto"]
-      ItemDto["PublishedProductResponse<br/>model/dto"]
+      PageDto["PublicationPageResponse<br/>model/dto"]
+      ItemDto["PublicationResponse<br/>model/dto"]
       ImgDto["ProductImageResponse<br/>model/dto"]
     end
 
-    Mapper["ProductResponseMapper<br/>+ toPublishedResponse<br/>+ toPublishedPage"]
+    Mapper["ProductResponseMapper<br/>+ toPublication<br/>+ toPublicationPage"]
     Url["UrlUtils.join(baseUrl, path)"]
     Errors["GlobalExceptionHandler<br/>(sin cambios)"]
   end
@@ -68,7 +68,7 @@ flowchart TB
     Minio[(MinIO / S3<br/>imágenes)]
   end
 
-  Browser -->|"GET /catalog/publish?name=&page=&size="| CorsCfg
+  Browser -->|"GET /catalog/publication?name=&page=&size="| CorsCfg
   CorsCfg --> PubCtrl
   PanelCtrl --> PanelSvc
   PubCtrl --> PubSvc
@@ -92,10 +92,12 @@ Notas:
 
 - `CorsConfig` es el único punto que habilita el navegador; el mapping cubre solo
   `/catalog/**`, por lo que `/actuator/**` y el resto de las rutas quedan fuera.
-- `PublishedProductService` no toca imágenes binarias ni MinIO: solo arma URLs
-  públicas con `ProductResponseMapper` + `UrlUtils`.
-- El panel conserva su camino (`ProductController` → `ProductService` /
-  `ProductPublicationService`) sin modificaciones.
+- `PublicationService` es el único dueño de los casos de publicación: la lectura
+  pública (`list`), la publicación/despublicación de un producto y la publicación
+  del catálogo. No toca imágenes binarias ni MinIO: solo arma URLs públicas con
+  `ProductResponseMapper` + `UrlUtils`.
+- El panel conserva su camino (`ProductController` → `ProductService`) sin
+  modificaciones.
 
 Variables de entorno relevantes de este corte: `BROWSER_ORIGINS` (orígenes CORS) y,
 heredada de la spec 001, `PUBLIC_API_BASE_URL` (base de `images[].url`). El valor de
@@ -110,25 +112,34 @@ import ni variable local.
 classDiagram
   direction TB
 
-  class PublishController {
-    -PublishedProductService publishedProductService
-    +list(name String, page String, size String) PublishedProductPageResponse
+  class PublicationController {
+    -PublicationService publicationService
+    +list(name String, page String, size String) PublicationPageResponse
+    +publishCatalog(ownerAccountId UUID, request PublishCatalogRequest) PublishCatalogResponse
+    +publish(id UUID, ownerAccountId UUID) ProductResponse
+    +unpublish(id UUID, ownerAccountId UUID) ProductResponse
   }
 
-  class PublishedProductService {
+  class PublicationService {
     -ProductRepository productRepository
     -ProductImageRepository productImageRepository
     -ProductResponseMapper responseMapper
+    -ProductLookup productLookup
     -int DEFAULT_PAGE = 1
     -int DEFAULT_SIZE = 24
     -int MAX_SIZE = 100
     -Sort SORT
-    +list(name String, page String, size String) PublishedProductPageResponse
+    +list(name String, page String, size String) PublicationPageResponse
+    +publish(ownerAccountId UUID, id UUID) ProductResponse
+    +unpublish(ownerAccountId UUID, id UUID) ProductResponse
+    +publishCatalog(ownerAccountId UUID, request PublishCatalogRequest) PublishCatalogResponse
     -normalizePage(raw String) int
     -normalizeSize(raw String) int
     -normalizeName(raw String) String
-    -loadPage(name String, page int, size int) Page~Product~
-    -imagesByProduct(List~Product~ products) Map
+    -findPage(name String, page int, size int) Page~Product~
+    -imagesByProductId(List~Product~ products) Map
+    -publishOwnerlessProducts(ownerAccountId UUID, request PublishCatalogRequest) int
+    -publishAccountDrafts(ownerAccountId UUID) int
   }
 
   class ProductRepository {
@@ -148,13 +159,13 @@ classDiagram
   class ProductResponseMapper {
     -CatalogProperties properties
     +toResponse(product Product, images List~ProductImage~) ProductResponse
-    +toPublishedResponse(product Product, images List~ProductImage~) PublishedProductResponse
-    +toPublishedPage(products List~Product~, imagesByProductId Map, page int, size int, totalItems long, totalPages int) PublishedProductPageResponse
+    +toPublication(product Product, images List~ProductImage~) PublicationResponse
+    +toPublicationPage(products List~Product~, imagesByProductId Map, page int, size int, totalItems long, totalPages int) PublicationPageResponse
     -toImageResponse(image ProductImage) ProductImageResponse
     -publicUrl(imageId UUID) String
   }
 
-  class PublishedProductResponse {
+  class PublicationResponse {
     <<record>>
     +UUID id
     +String name
@@ -164,9 +175,9 @@ classDiagram
     +List~ProductImageResponse~ images
   }
 
-  class PublishedProductPageResponse {
+  class PublicationPageResponse {
     <<record>>
-    +List~PublishedProductResponse~ items
+    +List~PublicationResponse~ items
     +int page
     +int size
     +long totalItems
@@ -220,12 +231,13 @@ classDiagram
     +join(baseUrl String, path String) String
   }
 
-  PublishController --> PublishedProductService
-  PublishedProductService --> ProductRepository
-  PublishedProductService --> ProductImageRepository
-  PublishedProductService --> ProductResponseMapper
-  ProductResponseMapper --> PublishedProductPageResponse
-  ProductResponseMapper --> PublishedProductResponse
+  PublicationController --> PublicationService
+  PublicationService --> ProductRepository
+  PublicationService --> ProductImageRepository
+  PublicationService --> ProductResponseMapper
+  PublicationService --> ProductLookup
+  ProductResponseMapper --> PublicationPageResponse
+  ProductResponseMapper --> PublicationResponse
   ProductResponseMapper --> ProductImageResponse
   ProductResponseMapper --> UrlUtils
   ProductResponseMapper --> CatalogProperties
@@ -267,14 +279,14 @@ sequenceDiagram
   autonumber
   participant B as Navegador (Storefront)
   participant CFG as CorsConfig
-  participant C as PublishController
-  participant S as PublishedProductService
+  participant C as PublicationController
+  participant S as PublicationService
   participant R as ProductRepository
   participant IR as ProductImageRepository
   participant M as ProductResponseMapper
   participant DB as PostgreSQL (catalog)
 
-  B->>CFG: GET /catalog/publish?name=cafe&page=9&size=24<br/>Origin: https://tienda.example
+  B->>CFG: GET /catalog/publication?name=cafe&page=9&size=24<br/>Origin: https://tienda.example
   CFG->>CFG: origen ∈ fes.cors.browser-origins
   CFG->>C: acceso permitido
   C->>S: list("cafe", "9", "24")
@@ -292,8 +304,8 @@ sequenceDiagram
   IR->>DB: select ... from product_images where product_id in (...)
   DB-->>IR: imágenes
   IR-->>S: List<ProductImage>
-  S->>M: toPublishedPage(productos, imágenesPorProducto, 2, 24, 30, 2)
-  M-->>S: PublishedProductPageResponse
+  S->>M: toPublicationPage(productos, imágenesPorProducto, 2, 24, 30, 2)
+  M-->>S: PublicationPageResponse
   S-->>C: respuesta con page=2
   C-->>B: 200 application/json<br/>Access-Control-Allow-Origin: https://tienda.example
 ```
@@ -313,19 +325,19 @@ sequenceDiagram
   autonumber
   participant B as Navegador (Storefront)
   participant CFG as CorsConfig (/catalog/**)
-  participant C as PublishController
+  participant C as PublicationController
   participant A as Actuator (/actuator/**)
 
   rect rgb(232, 244, 233)
-    B->>CFG: OPTIONS /catalog/publish<br/>Origin: https://tienda.example<br/>Access-Control-Request-Method: GET
+    B->>CFG: OPTIONS /catalog/publication<br/>Origin: https://tienda.example<br/>Access-Control-Request-Method: GET
     CFG-->>B: 200 · Access-Control-Allow-Origin: https://tienda.example<br/>Access-Control-Allow-Methods: GET<br/>(sin Access-Control-Allow-Credentials)
-    B->>CFG: GET /catalog/publish
+    B->>CFG: GET /catalog/publication
     CFG->>C: solicitud autorizada
     C-->>B: 200 JSON · Access-Control-Allow-Origin: https://tienda.example
   end
 
   rect rgb(250, 235, 235)
-    B->>CFG: GET /catalog/publish<br/>Origin: https://sitio-ajeno.example
+    B->>CFG: GET /catalog/publication<br/>Origin: https://sitio-ajeno.example
     CFG->>C: solicitud procesada
     C-->>B: 200 JSON · sin cabeceras CORS
     Note over B: el navegador bloquea la lectura<br/>y no es un error del servidor

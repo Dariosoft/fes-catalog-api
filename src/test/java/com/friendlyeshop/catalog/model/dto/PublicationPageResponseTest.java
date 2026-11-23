@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import tools.jackson.databind.json.JsonMapper;
 
-class PublishedProductPageResponseTest {
+class PublicationPageResponseTest {
 
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
@@ -19,8 +19,8 @@ class PublishedProductPageResponseTest {
     void serializesOnlyThePublicPageFields() throws JSONException {
         UUID productId = UUID.randomUUID();
         UUID imageId = UUID.randomUUID();
-        PublishedProductPageResponse response = new PublishedProductPageResponse(
-                List.of(new PublishedProductResponse(productId, "Café molido 500 g", new BigDecimal("1234.50"),
+        PublicationPageResponse response = new PublicationPageResponse(
+                List.of(new PublicationResponse(productId, "Café molido 500 g", new BigDecimal("1234.50"),
                         Currency.ARS, 7, List.of(new ProductImageResponse(imageId,
                                 "https://api.fes.test/catalog/images/" + imageId)))),
                 1, 24, 57, 3);
@@ -48,7 +48,7 @@ class PublishedProductPageResponseTest {
 
     @Test
     void serializesEmptyPageWithZeroTotals() throws JSONException {
-        PublishedProductPageResponse response = new PublishedProductPageResponse(List.of(), 1, 24, 0, 0);
+        PublicationPageResponse response = new PublicationPageResponse(List.of(), 1, 24, 0, 0);
 
         String json = jsonMapper.writeValueAsString(response);
 

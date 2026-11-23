@@ -1,11 +1,10 @@
 package com.friendlyeshop.catalog.controller;
 
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.model.dto.PublishedProductPageResponse;
-import com.friendlyeshop.catalog.service.ProductPublicationService;
-import com.friendlyeshop.catalog.service.PublishedProductService;
+import com.friendlyeshop.catalog.service.PublicationService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.MediaType;
@@ -18,40 +17,36 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/publish")
-public class PublishController {
+@RequestMapping("/publication")
+public class PublicationController {
 
-    private final PublishedProductService publishedProductService;
+    private final PublicationService publicationService;
 
-    private final ProductPublicationService publicationService;
-
-    public PublishController(PublishedProductService publishedProductService,
-            ProductPublicationService publicationService) {
-        this.publishedProductService = publishedProductService;
+    public PublicationController(PublicationService publicationService) {
         this.publicationService = publicationService;
     }
 
     @GetMapping
-    public PublishedProductPageResponse list(
+    public PublicationPageResponse list(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String page,
             @RequestParam(required = false) String size) {
-        return publishedProductService.list(name, page, size);
+        return publicationService.list(name, page, size);
     }
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/publish-catalog", consumes = MediaType.APPLICATION_JSON_VALUE)
     public PublishCatalogResponse publishCatalog(
             @RequestParam UUID ownerAccountId,
             @Valid @RequestBody(required = false) PublishCatalogRequest request) {
         return publicationService.publishCatalog(ownerAccountId, request);
     }
 
-    @PostMapping("/products/{id}")
+    @PostMapping("/publish/{id}")
     public ProductResponse publish(@PathVariable UUID id, @RequestParam UUID ownerAccountId) {
         return publicationService.publish(ownerAccountId, id);
     }
 
-    @PostMapping("/products/{id}/unpublish")
+    @PostMapping("/unpublish/{id}")
     public ProductResponse unpublish(@PathVariable UUID id, @RequestParam UUID ownerAccountId) {
         return publicationService.unpublish(ownerAccountId, id);
     }

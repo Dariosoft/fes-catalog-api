@@ -19,14 +19,14 @@ dependencias ni tablas: el esquema de la spec 001 ya contiene lo necesario.
   implementa `WebMvcConfigurer#configurePathMatch` y aplica `addPathPrefix("/catalog")`
   a los controllers del paquete `controller/`. Actuator usa su propio handler mapping y
   queda fuera del prefijo. **(RF-36, RF-37)**
-- `PublishController` (`/publish`) agrupa todo lo relativo a publicación: la lectura
-  pública `GET /catalog/publish`, la publicación de catálogo `POST /catalog/publish`, la
-  publicación de un producto `POST /catalog/publish/products/{id}` y su
-  despublicación `POST /catalog/publish/products/{id}/unpublish`. **(RF-1, RF-31, RF-35)**
+- `PublicationController` (`/publication`) agrupa todo lo relativo a publicación: la lectura
+  pública `GET /catalog/publication`, la publicación de catálogo `POST /catalog/publication/publish-catalog`, la
+  publicación de un producto `POST /catalog/publication/publish/{id}` y su
+  despublicación `POST /catalog/publication/unpublish/{id}`. **(RF-1, RF-31, RF-35)**
 - `ProductController` (`/products`) conserva el alta, la edición, el borrado y el
   listado por dueño: `GET /catalog/products?ownerAccountId=…`, con el mismo contrato.
   **(RF-30, NFR-7)**
-- El traslado de las rutas de publicación a `/catalog/publish/...` se coordina con
+- El traslado de las rutas de publicación a `/catalog/publication/...` se coordina con
   `fes-panel-api`, que las consume; el listado, el alta, la edición y el borrado del
   panel no cambian. **(RF-30, RF-35)**
 - La selección aplica cuatro condiciones simultáneas: etapa `published`,
@@ -57,7 +57,7 @@ dependencias ni tablas: el esquema de la spec 001 ya contiene lo necesario.
   **(RF-18, NFR-6)**
 - `ProductController` pasa a `@RequestMapping("/products")` y expone el listado, el
   alta, la edición y el borrado; las tres acciones de publicación se mudan a
-  `PublishController`. **(RF-30, RF-35)**
+  `PublicationController`. **(RF-30, RF-35)**
 - `application.yaml` no define CORS ni `BROWSER_ORIGINS`; el servicio no tiene
   `WebMvcConfigurer` alguno. **(RF-24 … RF-29)**
 - `@ConfigurationPropertiesScan` ya está activo en `CatalogApiApplication`, con los
@@ -75,13 +75,12 @@ src/main/java/com/friendlyeshop/catalog
 ├── controller/
 │   ├── ProductController                    # /products: CRUD y listado           RF-30
 │   ├── ProductImageController               # /images: lectura pública            RF-18
-│   └── PublishController                    # /publish: lectura y publicación     RF-1,35
+│   └── PublicationController                # /publication: lectura y publicación  RF-1,35
 ├── service/
 │   ├── ProductService                        # panel (sin cambios)
-│   ├── ProductPublicationService             # panel (sin cambios)
 │   ├── ProductImageService                   # imágenes públicas (sin cambios)
 │   ├── ProductLookup                         # panel (sin cambios)
-│   └── PublishedProductService               # NUEVO: caso de uso de lectura pública
+│   └── PublicationService                    # lectura, publicación y despublicación
 ├── repository/
 │   ├── ProductRepository                     # + findPublished / findPublishedByName  RF-2..6,23,33
 │   └── ProductImageRepository                # + findByProductIdIn                   RF-16,19
@@ -90,10 +89,10 @@ src/main/java/com/friendlyeshop/catalog
 │   ├── ProductImage                          # sin cambios
 │   └── dto/
 │       ├── ProductResponse / ProductImageResponse        # sin cambios (panel)
-│       ├── PublishedProductResponse          # NUEVO ítem público                    RF-15..17
-│       └── PublishedProductPageResponse      # NUEVO sobre paginado                  RF-14,20..22,34
+│       ├── PublicationResponse          # NUEVO ítem público                    RF-15..17
+│       └── PublicationPageResponse      # NUEVO sobre paginado                  RF-14,20..22,34
 ├── mapper/
-│   └── ProductResponseMapper                 # + toPublishedResponse / toPublishedPage RF-15..19
+│   └── ProductResponseMapper                 # + toPublication / toPublicationPage RF-15..19
 ├── config/
 │   ├── CatalogProperties                     # sin cambios
 │   ├── CorsProperties                        # NUEVO: fes.cors.browser-origins       RF-29, NFR-2
@@ -106,12 +105,14 @@ src/main/java/com/friendlyeshop/catalog
 
 Decisiones de ubicación según `/spring-boot-layered-template`:
 
-- `controller/PublishController` se separa de `ProductController` porque
+- `controller/PublicationController` se separa de `ProductController` porque
   expone un contrato público distinto (sin `ownerAccountId`, con paginación y sin
   datos internos). Así el contrato del panel queda literalmente sin tocar.
   **(RF-1, RF-30)**
-- `service/PublishedProductService` es el caso de uso completo: normaliza
-  parámetros, consulta, calcula totales y compone la página. No se crea un
+- `service/PublicationService` es el caso de uso completo de publicación:
+  `list` normaliza parámetros, consulta, calcula totales y compone la página;
+  `publish`, `unpublish` y `publishCatalog` aplican las transiciones de etapa.
+  Un solo servicio cubre todos los casos de publicación. No se crea un
   `validation/` ni un `util/` para la normalización porque no es una regla
   reutilizada fuera de este caso de uso y vive bien como métodos privados con
   constantes con nombre. **(RF-9 … RF-13)**
@@ -127,33 +128,50 @@ Decisiones de ubicación según `/spring-boot-layered-template`:
 
 ## 4. Contrato HTTP público — RF-1, RF-14, RF-30
 
-`GET /catalog/publish?name=&page=&size=` — sin sesión, sin token, sin
+`GET /catalog/publication?name=&page=&size=` — sin sesión, sin token, sin
 credenciales. **(RF-1, NFR-1)**
 
 | Aspecto | Definición | RF |
 |---|---|---|
-| Ruta | `GET /catalog/publish` | RF-1 |
+| Ruta | `GET /catalog/publication` | RF-1 |
 | `name` | Opcional, texto libre; contiene, sin distinguir mayúsculas | RF-6, RF-8 |
 | `page` | Opcional, entero ≥ 1; por defecto 1 | RF-9, RF-10 |
 | `size` | Opcional, entero ≥ 1; por defecto 24; máximo efectivo 100 | RF-11, RF-12 |
-| Cuerpo de respuesta | `PublishedProductPageResponse` | RF-14 |
+| Cuerpo de respuesta | `PublicationPageResponse` | RF-14 |
 | Errores de parámetros | Ninguno: se ajustan y responden 200 | RF-12, RF-13, RF-34 |
 
-`PublishController`:
+`PublicationController`:
 
 ```java
 @RestController
-@RequestMapping("/catalog/products")
-public class PublishController {
+@RequestMapping("/publication")
+public class PublicationController {
 
-    private final PublishedProductService publishedProductService;
+    private final PublicationService publicationService;
 
-    @GetMapping("/published")
-    public PublishedProductPageResponse list(
+    @GetMapping
+    public PublicationPageResponse list(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String page,
             @RequestParam(required = false) String size) {
-        return publishedProductService.list(name, page, size);
+        return publicationService.list(name, page, size);
+    }
+
+    @PostMapping(value = "/publish-catalog", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public PublishCatalogResponse publishCatalog(
+            @RequestParam UUID ownerAccountId,
+            @Valid @RequestBody(required = false) PublishCatalogRequest request) {
+        return publicationService.publishCatalog(ownerAccountId, request);
+    }
+
+    @PostMapping("/publish/{id}")
+    public ProductResponse publish(@PathVariable UUID id, @RequestParam UUID ownerAccountId) {
+        return publicationService.publish(ownerAccountId, id);
+    }
+
+    @PostMapping("/unpublish/{id}")
+    public ProductResponse unpublish(@PathVariable UUID id, @RequestParam UUID ownerAccountId) {
+        return publicationService.unpublish(ownerAccountId, id);
     }
 }
 ```
@@ -167,7 +185,7 @@ public class PublishController {
 
 ## 5. Normalización de paginación y ajuste de página — RF-9 … RF-13, RF-20 … RF-22, RF-34
 
-`PublishedProductService` aplica esta secuencia:
+`PublicationService#list` aplica esta secuencia:
 
 1. **`size`**: si es nulo, vacío, no numérico o menor a 1 → `24`; si es mayor a
    `100` → `100`. **(RF-11, RF-12, RF-13)**
@@ -256,7 +274,7 @@ List<ProductImage> findByProductIdIn(Collection<UUID> productIds);
 
 ## 8. DTOs y contrato JSON — RF-14 … RF-22
 
-`PublishedProductPageResponse` (`model/dto/`):
+`PublicationPageResponse` (`model/dto/`):
 
 ```json
 {
@@ -280,15 +298,15 @@ List<ProductImage> findByProductIdIn(Collection<UUID> productIds);
 ```
 
 ```java
-public record PublishedProductPageResponse(
-        List<PublishedProductResponse> items,
+public record PublicationPageResponse(
+        List<PublicationResponse> items,
         int page,
         int size,
         long totalItems,
         int totalPages) {
 }
 
-public record PublishedProductResponse(
+public record PublicationResponse(
         UUID id,
         String name,
         BigDecimal price,
@@ -314,23 +332,23 @@ public record PublishedProductResponse(
 `ProductResponseMapper` gana dos métodos y reutiliza el armado de URL existente:
 
 ```java
-public PublishedProductResponse toPublishedResponse(Product product, List<ProductImage> images);
+public PublicationResponse toPublication(Product product, List<ProductImage> images);
 
-public PublishedProductPageResponse toPublishedPage(List<Product> products,
+public PublicationPageResponse toPublicationPage(List<Product> products,
         Map<UUID, List<ProductImage>> imagesByProductId, int page, int size,
         long totalItems, int totalPages);
 ```
 
-- `toPublishedResponse` reutiliza `toImageResponse` y `UrlUtils.join` tal como están:
+- `toPublication` reutiliza `toImageResponse` y `UrlUtils.join` tal como están:
   `url = {fes.catalog.public-base-url}/catalog/images/{imageId}`. Es la misma URL que
   ya sirve `GET /catalog/images/{imageId}` sin credenciales. **(RF-18, NFR-6)**
 - Sin imágenes → `List.of()`. **(RF-19)**
-- `toPublishedPage` conserva el orden recibido de la consulta y no reordena en
+- `toPublicationPage` conserva el orden recibido de la consulta y no reordena en
   memoria. **(RF-23)**
 
 ## 10. Servicio de lectura pública — RF-2 … RF-8, RF-20 … RF-23, RF-31, RF-33, RF-34
 
-`PublishedProductService` (`service/`, `@Service`):
+`PublicationService` (`service/`, `@Service`):
 
 - `list(String name, String rawPage, String rawSize)` con
   `@Transactional(readOnly = true)`.
@@ -345,7 +363,7 @@ public PublishedProductPageResponse toPublishedPage(List<Product> products,
   4. Cargar imágenes de la página con `findByProductIdIn(ids)` y agrupar por
      `productId` en un `Map<UUID, List<ProductImage>>`. Si la página está vacía, no
      se consulta imágenes.
-  5. Delegar la composición en `ProductResponseMapper.toPublishedPage(...)`.
+  5. Delegar la composición en `ProductResponseMapper.toPublicationPage(...)`.
 - No muta entidades ni publica eventos. **(RF-31, NFR-7)**
 - Sin resultados → `items` vacío y totales 0 (§5, paso 7). **(RF-22)**
 
@@ -425,7 +443,7 @@ fes:
 
 ## 13. Conservación de contratos existentes — RF-30 … RF-32, NFR-5, NFR-7
 
-- `ProductController`, `ProductService`, `ProductPublicationService`,
+- `ProductController`, `ProductService`, `PublicationService`,
   `ProductResponseMapper.toResponse` y `ProductResponse` no cambian de
   comportamiento. **(RF-30)**
 - La lectura pública es `@Transactional(readOnly = true)` y no guarda ni elimina.
@@ -447,9 +465,9 @@ fes:
 
 | Área | Qué verifica | RF |
 |---|---|---|
-| `PublishedProductServiceTest` | Defaults 1/24; no numérico; menor a 1; `size` 101 → 100; `page` más allá de `totalPages` → última página con totales reales; sin resultados; `name` vacío; `name` con espacios; agrupación de imágenes | RF-8 … RF-14, RF-20, RF-21, RF-22, RF-34 |
+| `PublicationServiceTest` | Defaults 1/24; no numérico; menor a 1; `size` 101 → 100; `page` más allá de `totalPages` → última página con totales reales; sin resultados; `name` vacío; `name` con espacios; agrupación de imágenes | RF-8 … RF-14, RF-20, RF-21, RF-22, RF-34 |
 | `ProductResponseMapperTest` | Shape público sin dueño/etapa; `images` vacío; `url` pública con la base normalizada | RF-15 … RF-19, NFR-6 |
-| `PublishControllerWebTest` (MockMvc) | 200 con `items/page/size/totalItems/totalPages`; paso de `name`, `page` y `size`; parámetros no numéricos no producen 400; sin dueño ni etapa en el JSON | RF-1, RF-6, RF-9 … RF-17, RF-22 |
+| `PublicationControllerWebTest` (MockMvc) | 200 con `items/page/size/totalItems/totalPages`; paso de `name`, `page` y `size`; parámetros no numéricos no producen 400; sin dueño ni etapa en el JSON | RF-1, RF-6, RF-9 … RF-17, RF-22 |
 | `CorsConfigurationTest` (MockMvc) | `GET /catalog/**` con origen permitido recibe `Access-Control-Allow-Origin`; `OPTIONS` preflight con `GET`; origen ajeno sin cabeceras; `/actuator/health` sin CORS; `BROWSER_ORIGINS` vacía arranca sin orígenes; sin `Allow-Credentials` | RF-24 … RF-29 |
 | `CorsPropertiesTest` | Binding de lista separada por comas; vacío/ausente → lista vacía; recorte y descarte de blancos | RF-29, NFR-2 |
 | `ProductRepositoryIntegrationTest` (Testcontainers PostgreSQL) | Solo publicados, no borrados, con dueño y `stock is null or stock > 0`; incluye stock no informado y excluye cero/negativo, borrado, borrador, despublicado y sin dueño; filtro por nombre con mayúsculas distintas y con acentos distintos; orden `createdAt` desc + `id` asc estable entre páginas | RF-2 … RF-7, RF-23, RF-33 |
@@ -467,11 +485,11 @@ fes:
   `WebMvcConfigurer`, `CorsRegistry` y `CorsConfiguration`.
 - **Sin migraciones**: el esquema de la spec 001 ya soporta las consultas.
 - Coordinación con `fes-infra`: definir el valor de `BROWSER_ORIGINS` por entorno y
-  la exposición pública de `GET /catalog/publish` y
+  la exposición pública de `GET /catalog/publication` y
   `GET /catalog/images/{imageId}`. No se inventan valores ni ingress aquí.
 - Coordinación con `fes-panel-api`: sus llamadas de publicación y despublicación pasan
-  a `POST /catalog/publish/products/{id}` y
-  `POST /catalog/publish/products/{id}/unpublish`; `POST /catalog/publish` no cambia.
+  a `POST /catalog/publication/publish/{id}` y
+  `POST /catalog/publication/unpublish/{id}`; `POST /catalog/publication/publish-catalog` no cambia.
 - Coordinación con `fes-client-web`: consume `items/page/size/totalItems/totalPages`
   y usa la misma `images[].url` que ya muestra el panel.
 
@@ -479,8 +497,8 @@ fes:
 
 | RF | Entregable principal |
 |---|---|
-| RF-1 | `PublishController#list` en `GET /catalog/publish` |
-| RF-35 | `PublishController` con `POST /catalog/publish`, `/products/{id}` y `/products/{id}/unpublish` |
+| RF-1 | `PublicationController#list` en `GET /catalog/publication` |
+| RF-35 | `PublicationController` con `POST /catalog/publication/publish-catalog`, `POST /catalog/publication/publish/{id}` y `POST /catalog/publication/unpublish/{id}` |
 | RF-36 | `ApiPathConfig#configurePathMatch` con `addPathPrefix("/catalog")` |
 | RF-37 | Actuator fuera del prefijo; verificado en `CorsConfigurationTest` y en el arranque |
 | RF-2 | `findPublished` sin filtro por dueño |
@@ -495,11 +513,11 @@ fes:
 | RF-11 | `DEFAULT_SIZE = 24` |
 | RF-12 | `MAX_SIZE = 100` |
 | RF-13 | Parseo tolerante de `page`/`size` como `String` |
-| RF-14 | `PublishedProductPageResponse` |
-| RF-15 | `PublishedProductResponse` |
+| RF-14 | `PublicationPageResponse` |
+| RF-15 | `PublicationResponse` |
 | RF-16 | `ProductImageResponse(id, url)` reutilizado |
 | RF-17 | DTO público sin `ownerAccountId` ni `stage` |
-| RF-18 | `ProductResponseMapper.toPublishedResponse` + `UrlUtils.join` |
+| RF-18 | `ProductResponseMapper.toPublication` + `UrlUtils.join` |
 | RF-19 | `images` vacío cuando no hay imágenes |
 | RF-20 | `totalItems = page.getTotalElements()` |
 | RF-21 | `totalPages = page.getTotalPages()` |
@@ -519,14 +537,14 @@ fes:
 
 ## 18. Orden de implementación
 
-1. DTOs públicos `PublishedProductResponse` y `PublishedProductPageResponse`
+1. DTOs públicos `PublicationResponse` y `PublicationPageResponse`
    (**RF-14 … RF-17**).
 2. Consultas `findPublished`/`findPublishedByName` y `findByProductIdIn`
    (**RF-2 … RF-6, RF-23, RF-33**).
 3. Métodos públicos en `ProductResponseMapper` (**RF-15 … RF-19**, NFR-6).
-4. `PublishedProductService` con normalización, totales, clamp y filtro
+4. `PublicationService` con normalización, totales, clamp y filtro
    (**RF-6 … RF-14, RF-20 … RF-23, RF-31, RF-34**).
-5. `PublishController` (**RF-1, RF-14**).
+5. `PublicationController` (**RF-1, RF-14**).
 6. `CorsProperties`, `CorsConfig`, `application.yaml` y `.env.sample`
    (**RF-24 … RF-29, NFR-2**).
 7. Tests unitarios, web, de configuración e integración (**RF-1 … RF-34**).

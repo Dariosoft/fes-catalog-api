@@ -74,7 +74,7 @@ src/main/java/com/friendlyeshop/catalog
 │   └── ProductImageController       # GET /catalog/images/{id} público    RF-18,19
 ├── service/
 │   ├── ProductService               # alta, edición, listado, baja lógica RF-2,4-9,17,19-23,25
-│   ├── ProductPublicationService    # publicar, despublicar, publicar cat. RF-11-16
+│   ├── PublicationService    # publicar, despublicar, publicar cat. RF-11-16
 │   ├── ProductImageService          # lectura pública de bytes de imagen  RF-18,19
 │   └── ProductLookup                # colaborador: findOwned(owner, id)   RF-8,23
 ├── repository/
@@ -93,7 +93,7 @@ src/main/java/com/friendlyeshop/catalog
 │       ├── ProductResponse          # salida de producto
 │       ├── ProductImageResponse     # {id, url}
 │       ├── ProductImageContent      # {resource, contentType} para servir bytes
-│       ├── PublishCatalogItem       # ítem sin dueño del cuerpo
+│       ├── Publication           # ítem sin dueño del cuerpo
 │       ├── PublishCatalogRequest    # cuerpo de POST /catalog/publish (List<@Valid …>)
 │       ├── PublishCatalogResponse   # {published}
 │       └── ErrorResponse            # {error, message}
@@ -128,7 +128,7 @@ Decisiones de ubicación según `/spring-boot-layered-template`:
 - `util/UrlUtils` concentra el `join(baseUrl, path)` (normaliza barras) para no
   repetir el armado de URLs por todo el código.
 - `service/ProductLookup` es un colaborador compartido de `ProductService` y
-  `ProductPublicationService`; evita duplicar `findOwned`/404 por cuenta ajena.
+  `PublicationService`; evita duplicar `findOwned`/404 por cuenta ajena.
 - `exception/` para errores propios y el traductor HTTP; **los controladores son
   delgados y no acceden a repositorios ni a clientes de infraestructura** (solo a
   los servicios), y las entidades usan Lombok `@Getter`.
@@ -288,7 +288,7 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 - Las imágenes se guardan con un `imageId` aleatorio por archivo y los vacíos se
   ignoran.
 
-### 8.2 `ProductPublicationService`
+### 8.2 `PublicationService`
 
 - `publish(ownerAccountId, id)`: carga el producto con `ProductLookup.findOwned` y
   llama `publish()`; rechaza sin dueño/nombre/precio sin cambiar etapa. **(RF-11,
@@ -305,7 +305,7 @@ CREATE INDEX product_images_product_id_idx ON product_images (product_id);
 
 ### 8.3 `ProductLookup` (`service/`)
 
-- Colaborador compartido por `ProductService` y `ProductPublicationService`.
+- Colaborador compartido por `ProductService` y `PublicationService`.
 - `findOwned(ownerAccountId, id)`: busca con
   `findByIdAndOwnerAccountIdAndDeletedAtIsNull` y lanza `ProductNotFoundException`
   si no existe o es de otra cuenta. Elimina el `findOwnedProduct` duplicado.
@@ -348,7 +348,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
   cuenta porque la URL es pública y el `imageId` es un UUID opaco. Responde
   `Cache-Control: public, max-age=86400`. **(RF-19)**
 - `ProductController` delgado: HTTP → `ProductService` /
-  `ProductPublicationService`; sin reglas de negocio.
+  `PublicationService`; sin reglas de negocio.
 - **Regla as-built:** ningún controller importa `repository/` ni `client/`; solo
   conoce los servicios (y los DTOs). La resolución de entidades queda en
   `ProductLookup`/los servicios.
@@ -378,13 +378,13 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 - `ProductForm` (multipart): `name` (`@NotBlank`), `price` (`@NotNull`,
   `@DecimalMin("0")`), `currency` (`@NotNull`, `Currency`), `stock` (`@Min(0)`,
   opcional), `List<MultipartFile> images` (opcional).
-- `PublishCatalogItem`: `name` (`@NotBlank`), `price` (`@NotNull`,
+- `Publication`: `name` (`@NotBlank`), `price` (`@NotNull`,
   `@DecimalMin("0")`), `currency` (`@NotNull`), `stock` opcional (`@Min(0)`).
   **(RF-15)**
 - `ProductImageContent`: `{ resource, contentType }`, DTO de salida de
   `ProductImageService` hacia `ProductImageController` (no se expone como JSON).
   **(RF-18, RF-19)**
-- `PublishCatalogRequest`: `products` = `List<@Valid PublishCatalogItem>` (puede
+- `PublishCatalogRequest`: `products` = `List<@Valid Publication>` (puede
   ser nula); la validación se declara sobre el tipo del elemento, no sobre el
   contenedor, para evitar la deprecación de validación sobre `List`.
 - `PublishCatalogResponse`: `{ "published": n }`. **(RF-16)**
@@ -441,7 +441,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | `Product` | Nace draft; `publish` exige dueño/nombre/precio; `unpublish` conserva dueño; baja lógica | RF-2, RF-11, RF-12, RF-14 |
 | `ProductStage`/`Currency` | JSON/parseo en minúsculas y rechazo de valores inválidos | RF-1, RF-20, RF-21 |
 | `ProductService` | Alta/edición con imágenes; listado solo de la cuenta; filtro por nombre; sin dueño; moneda inválida; cuenta ajena (vía `ProductLookup`) | RF-4, RF-6, RF-7, RF-8, RF-17, RF-20, RF-21, RF-23, RF-25 |
-| `ProductPublicationService` | Publicar, despublicar, publicar catálogo (sin dueño + drafts), conteo 0, repeticiones y cuenta ajena (vía `ProductLookup`) | RF-11 … RF-16, RF-23 |
+| `PublicationService` | Publicar, despublicar, publicar catálogo (sin dueño + drafts), conteo 0, repeticiones y cuenta ajena (vía `ProductLookup`) | RF-11 … RF-16, RF-23 |
 | `ProductImageService` | Resuelve la imagen por id, delega `load` en `ImageStorage` y traduce inexistente a `ProductNotFoundException` | RF-18, RF-19 |
 | `MinioImageStorage` | `store`/`load` con `MinioClient` mock; tipo de contenido; fallo → `StorageUnavailableException` | RF-17, RF-18 |
 | Mapper/URL | `images[].url` apunta a `/catalog/images/{id}` con la base pública normalizada; `UrlUtils.join` normaliza barras | RF-19 |
@@ -490,7 +490,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
 | RF-12 | Validación de publicabilidad |
 | RF-13 | Dueño al publicar; imágenes/stock opcionales |
 | RF-14 | `Product.unpublish()` conserva dueño |
-| RF-15 | `ProductPublicationService.publishCatalog` |
+| RF-15 | `PublicationService.publishCatalog` |
 | RF-16 | Conteo 0 sin error |
 | RF-17 | `ImageStorage.store` + `ProductImage` |
 | RF-18 | Sin endpoint de escritura de imágenes |
@@ -512,7 +512,7 @@ por la frontera; un valor en el cuerpo se ignora. **(RF-3, RF-4, RF-23)**
    (**RF-7, RF-19, RF-21, RF-23**, NFR-3).
 4. `ProductService`: alta, edición, listado, baja lógica e imágenes
    (**RF-2, RF-4 … RF-10, RF-17, RF-19, RF-20, RF-21, RF-22, RF-23**).
-5. `ProductPublicationService`: publicar, despublicar y publicar catálogo
+5. `PublicationService`: publicar, despublicar y publicar catálogo
    (**RF-11 … RF-16**).
 6. `ProductController` y `ProductImageController`; conservar los endpoints de
    Actuator (**RF-6, RF-7, RF-8, RF-9, RF-11, RF-14, RF-15, RF-16, RF-18, RF-19,

@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public record PublishedProductResponse(
+public record PublicationResponse(
         UUID id,
         String name,
         BigDecimal price,

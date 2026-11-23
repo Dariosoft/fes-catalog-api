@@ -13,12 +13,11 @@ import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.model.dto.ProductImageResponse;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.model.dto.PublishedProductPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublishedProductResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationResponse;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
-import com.friendlyeshop.catalog.service.ProductPublicationService;
-import com.friendlyeshop.catalog.service.PublishedProductService;
+import com.friendlyeshop.catalog.service.PublicationService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -30,28 +29,25 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PublishController.class)
-class PublishControllerWebTest {
+@WebMvcTest(PublicationController.class)
+class PublicationControllerWebTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private PublishedProductService publishedProductService;
-
-    @MockitoBean
-    private ProductPublicationService publicationService;
+    private PublicationService publicationService;
 
     @Test
-    void listsPublishedProductsWithoutCredentials() throws Exception {
+    void listsPublicationsWithoutCredentials() throws Exception {
         UUID imageId = UUID.randomUUID();
-        PublishedProductResponse item = new PublishedProductResponse(UUID.randomUUID(), "Café molido",
+        PublicationResponse item = new PublicationResponse(UUID.randomUUID(), "Café molido",
                 new BigDecimal("1234.50"), Currency.ARS, 7, List.of(new ProductImageResponse(imageId,
                         "https://api.fes.test/catalog/images/" + imageId)));
-        when(publishedProductService.list(null, null, null))
-                .thenReturn(new PublishedProductPageResponse(List.of(item), 1, 24, 57, 3));
+        when(publicationService.list(null, null, null))
+                .thenReturn(new PublicationPageResponse(List.of(item), 1, 24, 57, 3));
 
-        mockMvc.perform(get("/catalog/publish"))
+        mockMvc.perform(get("/catalog/publication"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.size").value(24))
@@ -71,22 +67,22 @@ class PublishControllerWebTest {
 
     @Test
     void forwardsNameAndPaginationParameters() throws Exception {
-        when(publishedProductService.list("cafe", "2", "12")).thenReturn(page());
+        when(publicationService.list("cafe", "2", "12")).thenReturn(page());
 
-        mockMvc.perform(get("/catalog/publish")
+        mockMvc.perform(get("/catalog/publication")
                         .param("name", "cafe")
                         .param("page", "2")
                         .param("size", "12"))
                 .andExpect(status().isOk());
 
-        verify(publishedProductService).list("cafe", "2", "12");
+        verify(publicationService).list("cafe", "2", "12");
     }
 
     @Test
     void keepsNonNumericParametersOutOfTheBadRequestPath() throws Exception {
-        when(publishedProductService.list(null, "abc", "0")).thenReturn(page());
+        when(publicationService.list(null, "abc", "0")).thenReturn(page());
 
-        mockMvc.perform(get("/catalog/publish")
+        mockMvc.perform(get("/catalog/publication")
                         .param("page", "abc")
                         .param("size", "0"))
                 .andExpect(status().isOk())
@@ -96,10 +92,10 @@ class PublishControllerWebTest {
 
     @Test
     void returnsEmptyItemsArrayWhenThereAreNoProducts() throws Exception {
-        when(publishedProductService.list(null, null, null))
-                .thenReturn(new PublishedProductPageResponse(List.of(), 1, 24, 0, 0));
+        when(publicationService.list(null, null, null))
+                .thenReturn(new PublicationPageResponse(List.of(), 1, 24, 0, 0));
 
-        mockMvc.perform(get("/catalog/publish"))
+        mockMvc.perform(get("/catalog/publication"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.totalItems").value(0))
@@ -108,22 +104,22 @@ class PublishControllerWebTest {
 
     @Test
     void returnsEmptyImagesArrayForProductWithoutImages() throws Exception {
-        when(publishedProductService.list(null, null, null)).thenReturn(new PublishedProductPageResponse(
-                List.of(new PublishedProductResponse(UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
+        when(publicationService.list(null, null, null)).thenReturn(new PublicationPageResponse(
+                List.of(new PublicationResponse(UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
                         Currency.USD, 2, List.of())),
                 1, 24, 1, 1));
 
-        mockMvc.perform(get("/catalog/publish"))
+        mockMvc.perform(get("/catalog/publication"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].images").isEmpty());
     }
 
     @Test
     void returnsTheClampedPageReportedByTheService() throws Exception {
-        when(publishedProductService.list(null, "5", null))
-                .thenReturn(new PublishedProductPageResponse(List.of(), 2, 24, 30, 2));
+        when(publicationService.list(null, "5", null))
+                .thenReturn(new PublicationPageResponse(List.of(), 2, 24, 30, 2));
 
-        mockMvc.perform(get("/catalog/publish").param("page", "5"))
+        mockMvc.perform(get("/catalog/publication").param("page", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(2))
                 .andExpect(jsonPath("$.size").value(24))
@@ -137,7 +133,7 @@ class PublishControllerWebTest {
         UUID id = UUID.randomUUID();
         when(publicationService.publish(owner, id)).thenReturn(productResponse());
 
-        mockMvc.perform(post("/catalog/publish/products/{id}", id).param("ownerAccountId", owner.toString()))
+        mockMvc.perform(post("/catalog/publication/publish/{id}", id).param("ownerAccountId", owner.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stage").value("draft"));
     }
@@ -149,7 +145,7 @@ class PublishControllerWebTest {
         when(publicationService.unpublish(owner, id)).thenReturn(productResponse());
 
         mockMvc.perform(
-                        post("/catalog/publish/products/{id}/unpublish", id).param("ownerAccountId", owner.toString()))
+                        post("/catalog/publication/unpublish/{id}", id).param("ownerAccountId", owner.toString()))
                 .andExpect(status().isOk());
     }
 
@@ -159,7 +155,7 @@ class PublishControllerWebTest {
         UUID id = UUID.randomUUID();
         when(publicationService.publish(owner, id)).thenThrow(new InvalidProductException("sin dueño"));
 
-        mockMvc.perform(post("/catalog/publish/products/{id}", id).param("ownerAccountId", owner.toString()))
+        mockMvc.perform(post("/catalog/publication/publish/{id}", id).param("ownerAccountId", owner.toString()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("conflicto_de_publicacion"));
     }
@@ -169,7 +165,7 @@ class PublishControllerWebTest {
         UUID owner = UUID.randomUUID();
         when(publicationService.publishCatalog(eq(owner), any())).thenReturn(new PublishCatalogResponse(2));
 
-        mockMvc.perform(post("/catalog/publish")
+        mockMvc.perform(post("/catalog/publication/publish-catalog")
                         .param("ownerAccountId", owner.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"products\":[{\"name\":\"Nuevo\",\"price\":8.00,\"currency\":\"USD\"}]}"))
@@ -182,7 +178,7 @@ class PublishControllerWebTest {
         UUID owner = UUID.randomUUID();
         when(publicationService.publishCatalog(eq(owner), any())).thenReturn(new PublishCatalogResponse(0));
 
-        mockMvc.perform(post("/catalog/publish")
+        mockMvc.perform(post("/catalog/publication/publish-catalog")
                         .param("ownerAccountId", owner.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -191,8 +187,17 @@ class PublishControllerWebTest {
     }
 
     @Test
-    void noLongerServesTheProductsPublishedPath() throws Exception {
+    void noLongerServesThePreviousPublicationPaths() throws Exception {
+        UUID owner = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+
         mockMvc.perform(get("/catalog/products/published"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/catalog/publish"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/catalog/publish").param("ownerAccountId", owner.toString()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/catalog/publish/products/{id}", id).param("ownerAccountId", owner.toString()))
                 .andExpect(status().isNotFound());
     }
 
@@ -201,9 +206,9 @@ class PublishControllerWebTest {
                 Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
     }
 
-    private PublishedProductPageResponse page() {
-        return new PublishedProductPageResponse(
-                List.of(new PublishedProductResponse(UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
+    private PublicationPageResponse page() {
+        return new PublicationPageResponse(
+                List.of(new PublicationResponse(UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
                         Currency.ARS, 2, List.of())),
                 1, 24, 1, 1);
     }

@@ -8,8 +8,8 @@ import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublishedProductPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublishedProductResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationResponse;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -49,12 +49,12 @@ class ProductResponseMapperTest {
     }
 
     @Test
-    void mapsPublishedProductWithPublicImageUrlsOnly() {
+    void mapsPublicationWithPublicImageUrlsOnly() {
         Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, 4);
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
-        PublishedProductResponse response = mapper.toPublishedResponse(product, List.of(image));
+        PublicationResponse response = mapper.toPublication(product, List.of(image));
 
         assertThat(response.id()).isEqualTo(product.getId());
         assertThat(response.name()).isEqualTo("Zapatillas");
@@ -68,10 +68,10 @@ class ProductResponseMapperTest {
     }
 
     @Test
-    void mapsPublishedProductWithoutImagesToEmptyList() {
+    void mapsPublicationWithoutImagesToEmptyList() {
         Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 1);
 
-        PublishedProductResponse response = mapper.toPublishedResponse(product, List.of());
+        PublicationResponse response = mapper.toPublication(product, List.of());
 
         assertThat(response.images()).isEmpty();
     }
@@ -83,21 +83,21 @@ class ProductResponseMapperTest {
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, second.getId(), "products/s/1", "image/png");
 
-        PublishedProductPageResponse page = mapper.toPublishedPage(List.of(second, first),
+        PublicationPageResponse page = mapper.toPublicationPage(List.of(second, first),
                 Map.of(second.getId(), List.of(image)), 2, 24, 30, 2);
 
         assertThat(page.page()).isEqualTo(2);
         assertThat(page.size()).isEqualTo(24);
         assertThat(page.totalItems()).isEqualTo(30);
         assertThat(page.totalPages()).isEqualTo(2);
-        assertThat(page.items()).extracting(PublishedProductResponse::name).containsExactly("Segundo", "Primero");
+        assertThat(page.items()).extracting(PublicationResponse::name).containsExactly("Segundo", "Primero");
         assertThat(page.items().get(0).images()).hasSize(1);
         assertThat(page.items().get(1).images()).isEmpty();
     }
 
     @Test
     void composesEmptyPublishedPageWithZeroTotals() {
-        PublishedProductPageResponse page = mapper.toPublishedPage(List.of(), Map.of(), 5, 24, 0, 0);
+        PublicationPageResponse page = mapper.toPublicationPage(List.of(), Map.of(), 5, 24, 0, 0);
 
         assertThat(page.items()).isEmpty();
         assertThat(page.totalItems()).isZero();

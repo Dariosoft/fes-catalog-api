@@ -3,7 +3,11 @@ package com.friendlyeshop.catalog.service;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.PublishedProductPageResponse;
+import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.Publication;
+import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
+import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
 import com.friendlyeshop.catalog.repository.ProductRepository;
@@ -20,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class PublishedProductService {
+public class PublicationService {
 
     private static final int DEFAULT_PAGE = 1;
 
@@ -38,15 +42,19 @@ public class PublishedProductService {
 
     private final ProductResponseMapper responseMapper;
 
-    public PublishedProductService(ProductRepository productRepository,
-            ProductImageRepository productImageRepository, ProductResponseMapper responseMapper) {
+    private final ProductLookup productLookup;
+
+    public PublicationService(ProductRepository productRepository,
+            ProductImageRepository productImageRepository, ProductResponseMapper responseMapper,
+            ProductLookup productLookup) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.responseMapper = responseMapper;
+        this.productLookup = productLookup;
     }
 
     @Transactional(readOnly = true)
-    public PublishedProductPageResponse list(String name, String rawPage, String rawSize) {
+    public PublicationPageResponse list(String name, String rawPage, String rawSize) {
         int size = normalizeSize(rawSize);
         int page = normalizePage(rawPage);
         String filter = normalizeName(name);
@@ -56,10 +64,53 @@ public class PublishedProductService {
             result = findPage(filter, page, size);
         }
         if (result.isEmpty()) {
-            return responseMapper.toPublishedPage(List.of(), Map.of(), page, size, 0, 0);
+            return responseMapper.toPublicationPage(List.of(), Map.of(), page, size, 0, 0);
         }
-        return responseMapper.toPublishedPage(result.getContent(), imagesByProductId(result.getContent()),
+        return responseMapper.toPublicationPage(result.getContent(), imagesByProductId(result.getContent()),
                 page, size, result.getTotalElements(), result.getTotalPages());
+    }
+
+    @Transactional
+    public ProductResponse publish(UUID ownerAccountId, UUID id) {
+        Product product = productLookup.findOwned(ownerAccountId, id);
+        product.publish();
+        return responseMapper.toResponse(product, productImageRepository.findByProductId(product.getId()));
+    }
+
+    @Transactional
+    public ProductResponse unpublish(UUID ownerAccountId, UUID id) {
+        Product product = productLookup.findOwned(ownerAccountId, id);
+        product.unpublish();
+        return responseMapper.toResponse(product, productImageRepository.findByProductId(product.getId()));
+    }
+
+    @Transactional
+    public PublishCatalogResponse publishCatalog(UUID ownerAccountId, PublishCatalogRequest request) {
+        int published = publishOwnerlessProducts(ownerAccountId, request);
+        published += publishAccountDrafts(ownerAccountId);
+        return new PublishCatalogResponse(published);
+    }
+
+    private int publishOwnerlessProducts(UUID ownerAccountId, PublishCatalogRequest request) {
+        if (request == null || request.products() == null || request.products().isEmpty()) {
+            return 0;
+        }
+        for (Publication item : request.products()) {
+            Product product = Product.openNew(null, item.name(), item.price(), item.currency(), item.stock());
+            product.takeOwnership(ownerAccountId);
+            product.publish();
+            productRepository.save(product);
+        }
+        return request.products().size();
+    }
+
+    private int publishAccountDrafts(UUID ownerAccountId) {
+        List<Product> drafts = productRepository
+                .findByOwnerAccountIdAndStageAndDeletedAtIsNull(ownerAccountId, ProductStage.DRAFT);
+        for (Product draft : drafts) {
+            draft.publish();
+        }
+        return drafts.size();
     }
 
     private Page<Product> findPage(String name, int page, int size) {

@@ -86,7 +86,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 - [x] **T9. DTOs de entrada y salida**
   - Cubre: RF-15, RF-16, RF-19, RF-20, RF-21
   - `model/dto/`: `ProductForm` (con validaciones y `List<MultipartFile> images`),
-    `ProductResponse`, `ProductImageResponse`, `PublishCatalogItem`,
+    `ProductResponse`, `ProductImageResponse`, `Publication`,
     `PublishCatalogRequest`, `PublishCatalogResponse`, `ErrorResponse`.
   - Done when: los records compilan y las validaciones marcan nombre, precio y
     moneda inválidos.
@@ -137,7 +137,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
   - Done when: test verifica que el producto deja de listarse y que no se invoca
     ninguna operación de borrado en `ImageStorage`.
 
-- [x] **T16. `ProductPublicationService.publish` y `unpublish`**
+- [x] **T16. `PublicationService.publish` y `unpublish`**
   - Cubre: RF-11, RF-12, RF-13, RF-14, RF-23
   - `publish` exige dueño/nombre/precio; `unpublish` pasa a `draft` conservando
     dueño. Repeticiones no cambian la etapa ni fallan. Errores de cuenta ajena →
@@ -145,7 +145,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
   - Done when: tests cubren publicar un draft válido, rechazo sin dueño/nombre/
     precio, despublicar conservando `ownerAccountId` e idempotencia.
 
-- [x] **T17. `ProductPublicationService.publishCatalog`**
+- [x] **T17. `PublicationService.publishCatalog`**
   - Cubre: RF-15, RF-16
   - En una transacción, crea y publica los productos sin dueño del cuerpo con el
     dueño asignado, publica los `draft` de la cuenta y devuelve el conteo; sin
@@ -208,7 +208,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 - [x] **T28. Extraer `service/ProductLookup` (`findOwned`)**
   - Cubre: RF-8, RF-23
   - Colaborador `@Component` compartido por `ProductService` y
-    `ProductPublicationService`; `findOwned(ownerAccountId, id)` resuelve por
+    `PublicationService`; `findOwned(ownerAccountId, id)` resuelve por
     `findByIdAndOwnerAccountIdAndDeletedAtIsNull` o lanza
     `ProductNotFoundException`. Elimina el `findOwnedProduct` duplicado.
   - Done when: ambos servicios usan `ProductLookup.findOwned` y sus tests siguen
@@ -226,7 +226,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 
 - [x] **T30. `@Valid` sobre el elemento en `PublishCatalogRequest`**
   - Cubre: RF-15
-  - Declarar `List<@Valid PublishCatalogItem> products` (validación en el tipo del
+  - Declarar `List<@Valid Publication> products` (validación en el tipo del
     elemento) para evitar la deprecación de validación sobre el contenedor,
     manteniendo el comportamiento.
   - Done when: el test web de `POST /catalog/publish` sigue validando los ítems del
@@ -260,7 +260,7 @@ de dependencia y usan la arquitectura Layered de `AGENTS.md`
 - [x] **T22. Tests unitarios de entidad, enums, DTOs, servicios, storage y mapper**
   - Cubre: RF-1, RF-2, RF-8 … RF-14, RF-17, RF-19, RF-20, RF-21, RF-22, RF-23, RF-25
   - Cubrir `Product`, `ProductStage`, `Currency`, validaciones de `ProductForm`,
-    `ProductService`, `ProductPublicationService`, `ProductImageService`,
+    `ProductService`, `PublicationService`, `ProductImageService`,
     `ProductLookup`, `UrlUtils`, `MinioImageStorage` (con cliente mock) y
     `ProductResponseMapper`.
   - Done when: la suite unitaria pasa y no depende de red ni de base real.

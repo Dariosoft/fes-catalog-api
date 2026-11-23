@@ -10,9 +10,9 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 - [x] **T1. DTOs de lectura pública en `model/dto/`**
   - Cubre: RF-14, RF-15, RF-16, RF-17
-  - Crear `PublishedProductResponse(UUID id, String name, BigDecimal price,
+  - Crear `PublicationResponse(UUID id, String name, BigDecimal price,
     Currency currency, Integer stock, List<ProductImageResponse> images)` y
-    `PublishedProductPageResponse(List<PublishedProductResponse> items, int page,
+    `PublicationPageResponse(List<PublicationResponse> items, int page,
     int size, long totalItems, int totalPages)`. Reutilizar `ProductImageResponse`;
     no incluir dueño, etapa ni fechas.
   - Done when: los records compilan, no exponen `ownerAccountId`/`stage` y un test de
@@ -46,17 +46,17 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## Mapeo público
 
-- [x] **T5. `ProductResponseMapper.toPublishedResponse`**
+- [x] **T5. `ProductResponseMapper.toPublication`**
   - Cubre: RF-15, RF-16, RF-17, RF-18, RF-19, NFR-6
-  - Agregar el método que arma `PublishedProductResponse` y reutiliza
+  - Agregar el método que arma `PublicationResponse` y reutiliza
     `toImageResponse`/`UrlUtils.join` para `images[].url`; sin imágenes devolver
     `List.of()`.
   - Done when: el test del mapper verifica el shape público, la URL pública con la
     base normalizada y la lista vacía cuando no hay imágenes.
 
-- [x] **T6. `ProductResponseMapper.toPublishedPage`**
+- [x] **T6. `ProductResponseMapper.toPublicationPage`**
   - Cubre: RF-14, RF-20, RF-21, RF-22, RF-23
-  - Agregar el método que compone `PublishedProductPageResponse` a partir de la lista
+  - Agregar el método que compone `PublicationPageResponse` a partir de la lista
     de productos, el `Map<UUID, List<ProductImage>>` y los totales, conservando el
     orden recibido.
   - Done when: el test del mapper verifica totales, orden preservado y página vacía
@@ -66,7 +66,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 - [x] **T7. Normalización de `page` y `size`**
   - Cubre: RF-9, RF-10, RF-11, RF-12, RF-13
-  - En `PublishedProductService`, parsear ambos parámetros desde `String` con
+  - En `PublicationService`, parsear ambos parámetros desde `String` con
     `try/catch` de `NumberFormatException`; valores nulos, vacíos, no numéricos o
     menores a 1 caen en `DEFAULT_PAGE = 1` / `DEFAULT_SIZE = 24`; `size` mayor a
     `MAX_SIZE = 100` se recorta a 100.
@@ -101,12 +101,12 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 ## API HTTP pública
 
-- [x] **T11. `PublishController`**
+- [x] **T11. `PublicationController`**
   - Cubre: RF-1, RF-14, NFR-1
-  - Crear `controller/PublishController` con
-    `@RequestMapping("/catalog/products")` y `@GetMapping("/published")` que recibe
+  - Crear `controller/PublicationController` con `@RequestMapping("/publication")`
+    (el prefijo `/catalog` lo aporta `ApiPathConfig`) y un `@GetMapping` raíz que recibe
     `name`, `page` y `size` como `String` opcionales y delega en el servicio.
-  - Done when: `GET /catalog/publish` responde 200 sin credenciales y
+  - Done when: `GET /catalog/publication` responde 200 sin credenciales y
     parámetros no numéricos no producen 400.
 
 ## CORS y configuración
@@ -140,7 +140,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
 
 - [x] **T15. Tests unitarios de paginación y totales**
   - Cubre: RF-9, RF-10, RF-11, RF-12, RF-13, RF-14, RF-20, RF-21, RF-22, RF-34
-  - Cubrir `PublishedProductService` con repositorios mock: defaults, recorte de
+  - Cubrir `PublicationService` con repositorios mock: defaults, recorte de
     `size`, página fuera de rango, resultado vacío, totales y orden del `PageRequest`.
   - Done when: la suite unitaria pasa y no depende de base ni de red.
 
@@ -148,7 +148,7 @@ ninguna tarea hecha (`[ ]`). No hay migraciones ni dependencias nuevas.
   - Cubre: RF-6, RF-7, RF-8, RF-15, RF-16, RF-17, RF-18, RF-19, NFR-6
   - Cubrir la elección de consulta con y sin `name`, el shape público del mapper y la
     URL de imagen con la base normalizada.
-  - Done when: los tests de `PublishedProductService` y `ProductResponseMapper`
+  - Done when: los tests de `PublicationService` y `ProductResponseMapper`
     pasan en verde.
 
 - [x] **T17. Tests web del endpoint público**
