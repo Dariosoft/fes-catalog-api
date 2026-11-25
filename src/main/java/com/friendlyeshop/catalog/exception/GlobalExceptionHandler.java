@@ -1,6 +1,6 @@
 package com.friendlyeshop.catalog.exception;
 
-import com.friendlyeshop.catalog.model.dto.ErrorResponse;
+import com.friendlyeshop.catalog.model.dto.out.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -36,22 +36,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ProductNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse("producto_no_encontrado", exception.getMessage()));
+                .body(ErrorResponse.from("producto_no_encontrado", exception.getMessage()));
     }
 
     @ExceptionHandler(InvalidProductException.class)
     public ResponseEntity<ErrorResponse> handleInvalidProduct(InvalidProductException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("conflicto_de_publicacion", exception.getMessage()));
+                .body(ErrorResponse.from("conflicto_de_publicacion", exception.getMessage()));
     }
 
     @ExceptionHandler(StorageUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleStorageUnavailable(StorageUnavailableException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponse("almacenamiento_no_disponible", exception.getMessage()));
+                .body(ErrorResponse.from("almacenamiento_no_disponible", exception.getMessage()));
     }
 
     private ResponseEntity<ErrorResponse> badRequest(String message) {
-        return ResponseEntity.badRequest().body(new ErrorResponse("datos_invalidos", message));
+        return ResponseEntity.badRequest().body(ErrorResponse.from("datos_invalidos", message));
     }
 }

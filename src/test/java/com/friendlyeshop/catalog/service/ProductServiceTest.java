@@ -8,19 +8,19 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.friendlyeshop.catalog.model.dto.ProductImageContent;
+import com.friendlyeshop.catalog.model.dto.in.ProductImageContentDetails;
 import com.friendlyeshop.catalog.client.storage.ImageStorage;
 import com.friendlyeshop.catalog.client.storage.StoredImage;
 import com.friendlyeshop.catalog.config.CatalogProperties;
 import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
-import com.friendlyeshop.catalog.model.dto.ProductDetails;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
-import com.friendlyeshop.catalog.model.dto.ProductForm;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.request.ProductRequest;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
 import com.friendlyeshop.catalog.repository.ProductRepository;
 import java.math.BigDecimal;
@@ -93,7 +93,7 @@ class ProductServiceTest {
 
     @Test
     void rejectsMissingCurrency() {
-        ProductForm form = new ProductForm("Zapatillas", null, new BigDecimal("10.00"), null, null, List.of());
+        ProductRequest form = new ProductRequest("Zapatillas", null, new BigDecimal("10.00"), null, null, List.of());
 
         assertThatThrownBy(() -> service.create(UUID.randomUUID(), form))
                 .isInstanceOf(InvalidProductException.class);
@@ -152,7 +152,7 @@ class ProductServiceTest {
         stubSaves();
 
         ProductResponse response = service.update(owner, product.getId(),
-                new ProductForm("Nuevo", null, new BigDecimal("9.00"), Currency.USD, 2, List.of()));
+                new ProductRequest("Nuevo", null, new BigDecimal("9.00"), Currency.USD, 2, List.of()));
 
         assertThat(response.name()).isEqualTo("Nuevo");
         assertThat(response.currency()).isEqualTo(Currency.USD);
@@ -197,8 +197,8 @@ class ProductServiceTest {
         lenient().when(productImageRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
-    private ProductForm form(List<MultipartFile> images) {
-        return new ProductForm("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 3, images);
+    private ProductRequest form(List<MultipartFile> images) {
+        return new ProductRequest("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 3, images);
     }
 
     private static final class FakeImageStorage implements ImageStorage {
@@ -212,7 +212,7 @@ class ProductServiceTest {
         }
 
         @Override
-        public ProductImageContent load(String objectKey) {
+        public ProductImageContentDetails load(String objectKey) {
             throw new UnsupportedOperationException();
         }
     }

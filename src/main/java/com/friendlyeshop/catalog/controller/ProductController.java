@@ -1,7 +1,7 @@
 package com.friendlyeshop.catalog.controller;
 
-import com.friendlyeshop.catalog.model.dto.ProductForm;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.request.ProductRequest;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
 import com.friendlyeshop.catalog.service.ProductService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -40,16 +40,16 @@ public class ProductController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProductResponse create(
             @RequestParam(required = false) UUID ownerAccountId,
-            @Valid @ModelAttribute ProductForm form) {
-        return productService.create(ownerAccountId, form);
+            @Valid @ModelAttribute ProductRequest request) {
+        return productService.create(ownerAccountId, request);
     }
 
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ProductResponse update(
             @PathVariable UUID id,
             @RequestParam UUID ownerAccountId,
-            @Valid @ModelAttribute ProductForm form) {
-        return productService.update(ownerAccountId, id, form);
+            @Valid @ModelAttribute ProductRequest request) {
+        return productService.update(ownerAccountId, id, request);
     }
 
     @DeleteMapping("/{id}")

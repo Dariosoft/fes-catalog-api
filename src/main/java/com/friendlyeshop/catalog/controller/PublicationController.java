@@ -1,10 +1,10 @@
 package com.friendlyeshop.catalog.controller;
 
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublishCatalogRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublishCatalogResponse;
 import com.friendlyeshop.catalog.service.PublicationService;
 import jakarta.validation.Valid;
 import java.util.UUID;

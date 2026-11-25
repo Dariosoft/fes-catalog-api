@@ -18,8 +18,8 @@ import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.exception.StorageUnavailableException;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
-import com.friendlyeshop.catalog.model.dto.ProductForm;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.request.ProductRequest;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
 import com.friendlyeshop.catalog.service.ProductService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -74,7 +74,7 @@ class ProductControllerWebTest {
                         .param("ownerAccountId", owner.toString()))
                 .andExpect(status().isCreated());
 
-        ArgumentCaptor<ProductForm> captor = ArgumentCaptor.forClass(ProductForm.class);
+        ArgumentCaptor<ProductRequest> captor = ArgumentCaptor.forClass(ProductRequest.class);
         verify(productService).create(eq(owner), captor.capture());
         assertThat(captor.getValue().images()).hasSize(1);
     }
@@ -89,7 +89,7 @@ class ProductControllerWebTest {
                         .param("currency", "ARS"))
                 .andExpect(status().isCreated());
 
-        verify(productService).create(isNull(), any(ProductForm.class));
+        verify(productService).create(isNull(), any(ProductRequest.class));
     }
 
     @Test
@@ -115,7 +115,7 @@ class ProductControllerWebTest {
                         .param("ownerAccountId", owner.toString()))
                 .andExpect(status().isOk());
 
-        verify(productService).update(eq(owner), eq(id), any(ProductForm.class));
+        verify(productService).update(eq(owner), eq(id), any(ProductRequest.class));
     }
 
     @Test
@@ -167,7 +167,7 @@ class ProductControllerWebTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.description").value("Café de tueste medio"));
 
-        ArgumentCaptor<ProductForm> captor = ArgumentCaptor.forClass(ProductForm.class);
+        ArgumentCaptor<ProductRequest> captor = ArgumentCaptor.forClass(ProductRequest.class);
         verify(productService).create(eq(owner), captor.capture());
         assertThat(captor.getValue().description()).isEqualTo("Café de tueste medio");
     }
@@ -186,7 +186,7 @@ class ProductControllerWebTest {
                         .param("ownerAccountId", owner.toString()))
                 .andExpect(status().isOk());
 
-        ArgumentCaptor<ProductForm> captor = ArgumentCaptor.forClass(ProductForm.class);
+        ArgumentCaptor<ProductRequest> captor = ArgumentCaptor.forClass(ProductRequest.class);
         verify(productService).update(eq(owner), eq(id), captor.capture());
         assertThat(captor.getValue().description()).isEqualTo("Nueva");
     }

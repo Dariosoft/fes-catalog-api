@@ -18,14 +18,14 @@ import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.Publication;
-import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.ProductDetails;
+import com.friendlyeshop.catalog.model.dto.request.PublicationRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublishCatalogRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublishCatalogResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
@@ -350,7 +350,7 @@ class PublicationServiceTest {
         lenient().when(productRepository.save(any(Product.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         PublishCatalogRequest request = new PublishCatalogRequest(
-                List.of(new Publication("Nuevo", new BigDecimal("8.00"), Currency.USD, 3)));
+                List.of(new PublicationRequest("Nuevo", new BigDecimal("8.00"), Currency.USD, 3)));
 
         PublishCatalogResponse response = service.publishCatalog(owner, request);
 

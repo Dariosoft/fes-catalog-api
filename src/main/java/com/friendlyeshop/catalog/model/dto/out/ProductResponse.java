@@ -1,0 +1,37 @@
+package com.friendlyeshop.catalog.model.dto.out;
+
+import com.friendlyeshop.catalog.model.Product;
+import com.friendlyeshop.catalog.model.enums.Currency;
+import com.friendlyeshop.catalog.model.enums.ProductStage;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+public record ProductResponse(
+        UUID id,
+        UUID ownerAccountId,
+        String name,
+        String description,
+        BigDecimal price,
+        Currency currency,
+        Integer stock,
+        ProductStage stage,
+        List<ProductImageResponse> images,
+        Instant createdAt,
+        Instant updatedAt) {
+    public static ProductResponse from(Product product, List<ProductImageResponse> images) {
+        return new ProductResponse(
+                product.getId(),
+                product.getOwnerAccountId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getCurrency(),
+                product.getStock(),
+                product.getStage(),
+                images,
+                product.getCreatedAt(),
+                product.getUpdatedAt());
+    }
+}

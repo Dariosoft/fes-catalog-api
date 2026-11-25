@@ -4,13 +4,13 @@ import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.ProductDetails;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.Publication;
-import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublicationRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublishCatalogRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublishCatalogResponse;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
 import com.friendlyeshop.catalog.repository.ProductRepository;
@@ -99,14 +99,14 @@ public class PublicationService {
     public PublishCatalogResponse publishCatalog(UUID ownerAccountId, PublishCatalogRequest request) {
         int published = publishOwnerlessProducts(ownerAccountId, request);
         published += publishAccountDrafts(ownerAccountId);
-        return new PublishCatalogResponse(published);
+        return PublishCatalogResponse.from(published);
     }
 
     private int publishOwnerlessProducts(UUID ownerAccountId, PublishCatalogRequest request) {
         if (request == null || request.products() == null || request.products().isEmpty()) {
             return 0;
         }
-        for (Publication item : request.products()) {
+        for (PublicationRequest item : request.products()) {
             Product product = Product.openNew(null,
                     new ProductDetails(item.name(), null, item.price(), item.currency(), item.stock()));
             product.takeOwnership(ownerAccountId);

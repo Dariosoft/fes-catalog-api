@@ -6,9 +6,9 @@ import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.ProductDetails;
-import com.friendlyeshop.catalog.model.dto.ProductForm;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
+import com.friendlyeshop.catalog.model.dto.request.ProductRequest;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
 import com.friendlyeshop.catalog.repository.ProductRepository;
 import java.time.Instant;
@@ -44,11 +44,11 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse create(UUID ownerAccountId, ProductForm form) {
-        validateForm(form);
-        Product product = Product.openNew(ownerAccountId, ProductDetails.from(form));
+    public ProductResponse create(UUID ownerAccountId, ProductRequest request) {
+        validateRequest(request);
+        Product product = Product.openNew(ownerAccountId, ProductDetails.from(request));
         productRepository.save(product);
-        List<ProductImage> images = storeImages(product.getId(), form.images());
+        List<ProductImage> images = storeImages(product.getId(), request.images());
         return responseMapper.toResponse(product, images);
     }
 
@@ -65,12 +65,12 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse update(UUID ownerAccountId, UUID id, ProductForm form) {
-        validateForm(form);
+    public ProductResponse update(UUID ownerAccountId, UUID id, ProductRequest request) {
+        validateRequest(request);
         Product product = productLookup.findOwned(ownerAccountId, id);
-        product.update(ProductDetails.from(form));
+        product.update(ProductDetails.from(request));
         List<ProductImage> images = new ArrayList<>(productImageRepository.findByProductId(product.getId()));
-        images.addAll(storeImages(product.getId(), form.images()));
+        images.addAll(storeImages(product.getId(), request.images()));
         return responseMapper.toResponse(product, images);
     }
 
@@ -80,17 +80,17 @@ public class ProductService {
         product.deleteLogically(Instant.now());
     }
 
-    private void validateForm(ProductForm form) {
-        if (form.name() == null || form.name().isBlank()) {
+    private void validateRequest(ProductRequest request) {
+        if (request.name() == null || request.name().isBlank()) {
             throw new InvalidProductException("El nombre del producto es obligatorio");
         }
-        if (form.price() == null || form.price().signum() < 0) {
+        if (request.price() == null || request.price().signum() < 0) {
             throw new InvalidProductException("El precio del producto debe ser mayor o igual a cero");
         }
-        if (form.currency() == null) {
+        if (request.currency() == null) {
             throw new InvalidProductException("La moneda del producto es obligatoria");
         }
-        if (form.stock() != null && form.stock() < 0) {
+        if (request.stock() != null && request.stock() < 0) {
             throw new InvalidProductException("El stock del producto no puede ser negativo");
         }
     }

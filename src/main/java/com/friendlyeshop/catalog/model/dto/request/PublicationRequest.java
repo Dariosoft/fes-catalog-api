@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.model.dto;
+package com.friendlyeshop.catalog.model.dto.request;
 
 import com.friendlyeshop.catalog.model.enums.Currency;
 import jakarta.validation.constraints.DecimalMin;
@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
-public record Publication(
+public record PublicationRequest(
         @NotBlank String name,
         @NotNull @DecimalMin("0") BigDecimal price,
         @NotNull Currency currency,

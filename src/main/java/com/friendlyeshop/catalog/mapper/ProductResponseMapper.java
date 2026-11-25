@@ -3,11 +3,11 @@ package com.friendlyeshop.catalog.mapper;
 import com.friendlyeshop.catalog.config.CatalogProperties;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.ProductImageResponse;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductImageResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
 import com.friendlyeshop.catalog.util.UrlUtils;
 import java.util.List;
 import java.util.Map;
@@ -26,40 +26,15 @@ public class ProductResponseMapper {
     }
 
     public ProductResponse toResponse(Product product, List<ProductImage> images) {
-        return new ProductResponse(
-                product.getId(),
-                product.getOwnerAccountId(),
-                product.getName(),
-                product.getDescription(),
-                product.getPrice(),
-                product.getCurrency(),
-                product.getStock(),
-                product.getStage(),
-                toImageResponses(images),
-                product.getCreatedAt(),
-                product.getUpdatedAt());
+        return ProductResponse.from(product, toImageResponses(images));
     }
 
     public PublicationResponse toPublication(Product product, List<ProductImage> images) {
-        return new PublicationResponse(
-                product.getId(),
-                product.getName(),
-                product.getPrice(),
-                product.getCurrency(),
-                product.getStock(),
-                toImageResponses(images));
+        return PublicationResponse.from(product, toImageResponses(images));
     }
 
     public PublicationDetailResponse toPublicationDetail(Product product, List<ProductImage> images) {
-        return new PublicationDetailResponse(
-                product.getId(),
-                product.getName(),
-                product.getPrice(),
-                product.getCurrency(),
-                product.getStock(),
-                product.getDescription(),
-                product.getOwnerAccountId(),
-                toImageResponses(images));
+        return PublicationDetailResponse.from(product, toImageResponses(images));
     }
 
     public PublicationPageResponse toPublicationPage(List<Product> products,
@@ -68,7 +43,7 @@ public class ProductResponseMapper {
                 .map(product -> toPublication(product,
                         imagesByProductId.getOrDefault(product.getId(), List.of())))
                 .toList();
-        return new PublicationPageResponse(items, page, size, totalItems, totalPages);
+        return PublicationPageResponse.from(items, page, size, totalItems, totalPages);
     }
 
     private List<ProductImageResponse> toImageResponses(List<ProductImage> images) {
@@ -78,7 +53,7 @@ public class ProductResponseMapper {
     }
 
     private ProductImageResponse toImageResponse(ProductImage image) {
-        return new ProductImageResponse(image.getId(), publicUrl(image.getId()));
+        return ProductImageResponse.from(image, publicUrl(image.getId()));
     }
 
     private String publicUrl(UUID imageId) {

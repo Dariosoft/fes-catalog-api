@@ -29,6 +29,9 @@ Use the basic folders for obvious cases:
 - `model/`: persistence entities (the database models).
 - `model/dto/`: transport objects that enter or leave through APIs, events, or external contracts.
 - For multi-field use-case inputs, pass a single command or value record (for example `ShopDetails`, `ProductDetails`) instead of positional parameters; adding a field then changes the record and its mapping, not every call site.
+- Inside `model/dto/`, organize DTOs into `request/` for HTTP request bodies, `in/` for inbound commands or external input records (for example `ShopDetails`, `ProductDetails`, `GoogleProfile`), and `out/` for public response contracts (for example `ShopResponse`, `ErrorResponse`).
+- Name DTOs by direction: every class in `model/dto/in` ends with `Details`, every class in `model/dto/out` ends with `Response`, and every class in `model/dto/request` ends with `Request` (replace `Form` with `Request`).
+- Give every `*Details` and `*Response` DTO a static factory that maps from its source (prefer `from(...)`; semantic factories such as `anonymous`/`authenticated` or `opened`/`failed` are acceptable when there is no single source), and use it at construction sites instead of the canonical constructor; request DTOs are populated by the HTTP binding.
 - `model/enums/`: enums used by models and DTOs.
 - `model/converters/`: converters (for example, JPA `AttributeConverter`) that map a model value to/from its stored representation.
 - `config/`: properties, beans, framework configuration, CORS, security, serializers, clients configured as infrastructure.

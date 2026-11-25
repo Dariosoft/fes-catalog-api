@@ -2,7 +2,7 @@ package com.friendlyeshop.catalog.model;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.model.converters.ProductStageConverter;
-import com.friendlyeshop.catalog.model.dto.ProductDetails;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import jakarta.persistence.Column;
