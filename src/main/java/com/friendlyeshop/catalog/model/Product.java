@@ -2,6 +2,7 @@ package com.friendlyeshop.catalog.model;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.model.converters.ProductStageConverter;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import jakarta.persistence.Column;
@@ -34,6 +35,9 @@ public class Product {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
+    @Column(name = "description", length = 1000)
+    private String description;
+
     @Column(name = "price", nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
@@ -64,24 +68,32 @@ public class Product {
     protected Product() {
     }
 
-    public static Product openNew(UUID ownerAccountId, String name, BigDecimal price, Currency currency,
-            Integer stock) {
+    public static Product openNew(UUID ownerAccountId, ProductDetails details) {
         Product product = new Product();
         product.id = UUID.randomUUID();
         product.ownerAccountId = ownerAccountId;
-        product.name = name;
-        product.price = price;
-        product.currency = currency;
-        product.stock = stock;
+        product.name = details.name();
+        product.description = normalizeDescription(details.description());
+        product.price = details.price();
+        product.currency = details.currency();
+        product.stock = details.stock();
         product.stage = ProductStage.DRAFT;
         return product;
     }
 
-    public void update(String name, BigDecimal price, Currency currency, Integer stock) {
-        this.name = name;
-        this.price = price;
-        this.currency = currency;
-        this.stock = stock;
+    public void update(ProductDetails details) {
+        this.name = details.name();
+        this.price = details.price();
+        this.currency = details.currency();
+        this.stock = details.stock();
+        this.description = normalizeDescription(details.description());
+    }
+
+    private static String normalizeDescription(String description) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+        return description.strip();
     }
 
     public void publish() {

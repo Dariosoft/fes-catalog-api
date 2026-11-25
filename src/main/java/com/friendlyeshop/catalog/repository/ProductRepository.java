@@ -55,4 +55,22 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             @Param("minimumStock") int minimumStock,
             @Param("name") String name,
             Pageable pageable);
+
+    /**
+     * Returns a single public publication by its identifier, applying the same visibility rules used by
+     * {@link #findPublished}: published, not logically deleted, owned by an account and with unknown or
+     * positive stock.
+     */
+    @Query("""
+            select p from Product p
+            where p.id = :id
+              and p.stage = :stage
+              and p.deletedAt is null
+              and p.ownerAccountId is not null
+              and (p.stock is null or p.stock > :minimumStock)
+            """)
+    Optional<Product> findPublicById(
+            @Param("id") UUID id,
+            @Param("stage") ProductStage stage,
+            @Param("minimumStock") int minimumStock);
 }

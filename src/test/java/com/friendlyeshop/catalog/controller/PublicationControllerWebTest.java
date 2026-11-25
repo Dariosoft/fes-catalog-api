@@ -1,5 +1,6 @@
 package com.friendlyeshop.catalog.controller;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -10,11 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
-import com.friendlyeshop.catalog.model.dto.ProductImageResponse;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationResponse;
+import com.friendlyeshop.catalog.exception.ProductNotFoundException;
+import com.friendlyeshop.catalog.model.dto.out.ProductImageResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublishCatalogResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.service.PublicationService;
@@ -128,6 +131,58 @@ class PublicationControllerWebTest {
     }
 
     @Test
+    void returnsPublicationDetailWithoutCredentials() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID seller = UUID.randomUUID();
+        UUID imageId = UUID.randomUUID();
+        PublicationDetailResponse detail = new PublicationDetailResponse(id, "Café molido",
+                new BigDecimal("1234.50"), Currency.ARS, 7, "Café de tueste medio", seller,
+                List.of(new ProductImageResponse(imageId, "https://api.fes.test/catalog/images/" + imageId)));
+        when(publicationService.detail(id)).thenReturn(detail);
+
+        mockMvc.perform(get("/catalog/publication/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.name").value("Café molido"))
+                .andExpect(jsonPath("$.price").value(1234.50))
+                .andExpect(jsonPath("$.currency").value("ARS"))
+                .andExpect(jsonPath("$.stock").value(7))
+                .andExpect(jsonPath("$.description").value("Café de tueste medio"))
+                .andExpect(jsonPath("$.sellerAccountId").value(seller.toString()))
+                .andExpect(jsonPath("$.images[0].id").value(imageId.toString()))
+                .andExpect(jsonPath("$.images[0].url")
+                        .value("https://api.fes.test/catalog/images/" + imageId))
+                .andExpect(jsonPath("$.stage").doesNotExist())
+                .andExpect(jsonPath("$.ownerAccountId").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.credentials").doesNotExist());
+    }
+
+    @Test
+    void serializesNullDescriptionAndEmptyImages() throws Exception {
+        UUID id = UUID.randomUUID();
+        PublicationDetailResponse detail = new PublicationDetailResponse(id, "Zapatillas",
+                new BigDecimal("10.00"), Currency.USD, null, null, UUID.randomUUID(), List.of());
+        when(publicationService.detail(id)).thenReturn(detail);
+
+        mockMvc.perform(get("/catalog/publication/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value(nullValue()))
+                .andExpect(jsonPath("$.stock").value(nullValue()))
+                .andExpect(jsonPath("$.images").isEmpty());
+    }
+
+    @Test
+    void returnsNotFoundForUnknownOrInvisiblePublication() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(publicationService.detail(id)).thenThrow(new ProductNotFoundException("La publicación no existe"));
+
+        mockMvc.perform(get("/catalog/publication/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("producto_no_encontrado"));
+    }
+
+    @Test
     void publishesProduct() throws Exception {
         UUID owner = UUID.randomUUID();
         UUID id = UUID.randomUUID();
@@ -202,8 +257,8 @@ class PublicationControllerWebTest {
     }
 
     private ProductResponse productResponse() {
-        return new ProductResponse(UUID.randomUUID(), UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
-                Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
+        return new ProductResponse(UUID.randomUUID(), UUID.randomUUID(), "Zapatillas", null,
+                new BigDecimal("10.00"), Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
     }
 
     private PublicationPageResponse page() {

@@ -3,6 +3,7 @@ package com.friendlyeshop.catalog.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
@@ -63,7 +64,8 @@ class ProductRepositoryIntegrationTest {
 
     @Test
     void persistsProductWithNullableOwnerAndLowercaseStage() {
-        Product product = Product.openNew(null, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, null);
+        Product product = Product.openNew(null,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, null));
         productRepository.saveAndFlush(product);
 
         Object stage = entityManager.createNativeQuery("select stage from products where id = :id")
@@ -76,7 +78,8 @@ class ProductRepositoryIntegrationTest {
 
     @Test
     void persistsAndFindsImagesByProduct() {
-        Product product = Product.openNew(UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"), Currency.USD, 2);
+        Product product = Product.openNew(UUID.randomUUID(),
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, 2));
         productRepository.saveAndFlush(product);
         ProductImage image = ProductImage.of(UUID.randomUUID(), product.getId(), "products/x/y", "image/png");
         productImageRepository.saveAndFlush(image);
@@ -91,9 +94,12 @@ class ProductRepositoryIntegrationTest {
     @Test
     void listExcludesDeletedAndOtherAccounts() {
         UUID owner = UUID.randomUUID();
-        Product own = Product.openNew(owner, "Mio", new BigDecimal("1.00"), Currency.ARS, null);
-        Product other = Product.openNew(UUID.randomUUID(), "Ajeno", new BigDecimal("2.00"), Currency.ARS, null);
-        Product deleted = Product.openNew(owner, "Borrado", new BigDecimal("3.00"), Currency.ARS, null);
+        Product own = Product.openNew(owner,
+                new ProductDetails("Mio", null, new BigDecimal("1.00"), Currency.ARS, null));
+        Product other = Product.openNew(UUID.randomUUID(),
+                new ProductDetails("Ajeno", null, new BigDecimal("2.00"), Currency.ARS, null));
+        Product deleted = Product.openNew(owner,
+                new ProductDetails("Borrado", null, new BigDecimal("3.00"), Currency.ARS, null));
         deleted.deleteLogically(Instant.now());
         productRepository.saveAllAndFlush(List.of(own, other, deleted));
 
@@ -107,7 +113,8 @@ class ProductRepositoryIntegrationTest {
     @Test
     void findByIdIsScopedToOwner() {
         UUID owner = UUID.randomUUID();
-        Product own = Product.openNew(owner, "Mio", new BigDecimal("1.00"), Currency.ARS, null);
+        Product own = Product.openNew(owner,
+                new ProductDetails("Mio", null, new BigDecimal("1.00"), Currency.ARS, null));
         productRepository.saveAndFlush(own);
 
         assertThat(productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(own.getId(), owner)).isPresent();
@@ -119,8 +126,10 @@ class ProductRepositoryIntegrationTest {
     @Test
     void findsAccountDraftsOnly() {
         UUID owner = UUID.randomUUID();
-        Product draft = Product.openNew(owner, "Borrador", new BigDecimal("1.00"), Currency.ARS, null);
-        Product published = Product.openNew(owner, "Publicado", new BigDecimal("2.00"), Currency.ARS, null);
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador", null, new BigDecimal("1.00"), Currency.ARS, null));
+        Product published = Product.openNew(owner,
+                new ProductDetails("Publicado", null, new BigDecimal("2.00"), Currency.ARS, null));
         published.publish();
         productRepository.saveAllAndFlush(List.of(draft, published));
 
@@ -136,7 +145,8 @@ class ProductRepositoryIntegrationTest {
         UUID owner = UUID.randomUUID();
         Product visible = publishedProduct(owner, "Visible", 3);
         Product otherVendor = publishedProduct(UUID.randomUUID(), "Otro vendedor", 8);
-        Product draft = Product.openNew(owner, "Borrador", new BigDecimal("10.00"), Currency.ARS, 5);
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador", null, new BigDecimal("10.00"), Currency.ARS, 5));
         Product deleted = publishedProduct(owner, "Borrado", 5);
         deleted.deleteLogically(Instant.now());
         Product withoutStock = publishedProduct(owner, "Sin stock informado", null);
@@ -197,7 +207,8 @@ class ProductRepositoryIntegrationTest {
     @Test
     void findPublishedExcludesDraftAndUnpublishedProducts() {
         UUID owner = UUID.randomUUID();
-        Product draft = Product.openNew(owner, "Borrador nuevo", new BigDecimal("10.00"), Currency.ARS, 3);
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador nuevo", null, new BigDecimal("10.00"), Currency.ARS, 3));
         Product unpublished = publishedProduct(owner, "Despublicado", 3);
         unpublished.unpublish();
         productRepository.saveAllAndFlush(List.of(draft, unpublished));
@@ -211,8 +222,8 @@ class ProductRepositoryIntegrationTest {
 
     @Test
     void schemaRejectsNegativeStockSoItCanNeverReachThePublicReading() {
-        Product negative = Product.openNew(UUID.randomUUID(), "Stock negativo", new BigDecimal("10.00"),
-                Currency.ARS, -1);
+        Product negative = Product.openNew(UUID.randomUUID(),
+                new ProductDetails("Stock negativo", null, new BigDecimal("10.00"), Currency.ARS, -1));
         negative.publish();
 
         assertThatThrownBy(() -> productRepository.saveAndFlush(negative))
@@ -258,6 +269,86 @@ class ProductRepositoryIntegrationTest {
         assertThat(secondPage).extracting(Product::getName).last().isEqualTo("Mas viejo");
     }
 
+    @Test
+    void migrationAddsNullableDescriptionColumn() {
+        Object[] column = (Object[]) entityManager.createNativeQuery("""
+                select data_type, character_maximum_length, is_nullable
+                from information_schema.columns
+                where table_name = 'products' and column_name = 'description'
+                """).getSingleResult();
+
+        assertThat(column[0]).isEqualTo("character varying");
+        assertThat(((Number) column[1]).intValue()).isEqualTo(1000);
+        assertThat(column[2]).isEqualTo("YES");
+    }
+
+    @Test
+    void persistsAndRetrievesDescription() {
+        Product product = Product.openNew(UUID.randomUUID(),
+                new ProductDetails("Café", "  Café de tueste medio  ", new BigDecimal("10.00"), Currency.ARS, 3));
+        productRepository.saveAndFlush(product);
+        entityManager.clear();
+
+        Product reloaded = productRepository.findById(product.getId()).orElseThrow();
+
+        assertThat(reloaded.getDescription()).isEqualTo("Café de tueste medio");
+    }
+
+    @Test
+    void findPublicByIdReturnsPublishedProductWithPositiveStock() {
+        Product visible = publishedProductWithDescription(UUID.randomUUID(), "Visible", 3, "Descripción");
+        productRepository.saveAndFlush(visible);
+        entityManager.clear();
+
+        assertThat(productRepository.findPublicById(visible.getId(), ProductStage.PUBLISHED, 0))
+                .isPresent()
+                .get()
+                .extracting(Product::getDescription)
+                .isEqualTo("Descripción");
+    }
+
+    @Test
+    void findPublicByIdReturnsPublishedProductWithoutStockInformation() {
+        Product withoutStock = publishedProduct(UUID.randomUUID(), "Sin stock informado", null);
+        productRepository.saveAndFlush(withoutStock);
+        entityManager.clear();
+
+        assertThat(productRepository.findPublicById(withoutStock.getId(), ProductStage.PUBLISHED, 0)).isPresent();
+    }
+
+    @Test
+    void findPublicByIdHidesDraftUnpublishedDeletedOwnerlessAndZeroStock() {
+        UUID owner = UUID.randomUUID();
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador", null, new BigDecimal("10.00"), Currency.ARS, 3));
+        Product unpublished = publishedProduct(owner, "Despublicado", 3);
+        unpublished.unpublish();
+        Product deleted = publishedProduct(owner, "Borrado", 3);
+        deleted.deleteLogically(Instant.now());
+        Product ownerless = publishedProduct(owner, "Sin dueño", 3);
+        Product zeroStock = publishedProduct(owner, "Sin stock cero", 0);
+        productRepository.saveAllAndFlush(List.of(draft, unpublished, deleted, ownerless, zeroStock));
+        entityManager.createNativeQuery("update products set owner_account_id = null where id = :id")
+                .setParameter("id", ownerless.getId())
+                .executeUpdate();
+        entityManager.clear();
+
+        assertThat(productRepository.findPublicById(draft.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
+        assertThat(productRepository.findPublicById(unpublished.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
+        assertThat(productRepository.findPublicById(deleted.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
+        assertThat(productRepository.findPublicById(ownerless.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
+        assertThat(productRepository.findPublicById(zeroStock.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
+        assertThat(productRepository.findPublicById(UUID.randomUUID(), ProductStage.PUBLISHED, 0)).isEmpty();
+    }
+
+    private static Product publishedProductWithDescription(UUID owner, String name, Integer stock,
+            String description) {
+        Product product = Product.openNew(owner,
+                new ProductDetails(name, description, new BigDecimal("10.00"), Currency.ARS, stock));
+        product.publish();
+        return product;
+    }
+
     private void setCreatedAt(Product product, Instant createdAt) {
         entityManager.createNativeQuery("update products set created_at = :createdAt where id = :id")
                 .setParameter("createdAt", createdAt)
@@ -266,7 +357,8 @@ class ProductRepositoryIntegrationTest {
     }
 
     private static Product publishedProduct(UUID owner, String name, Integer stock) {
-        Product product = Product.openNew(owner, name, new BigDecimal("10.00"), Currency.ARS, stock);
+        Product product = Product.openNew(owner,
+                new ProductDetails(name, null, new BigDecimal("10.00"), Currency.ARS, stock));
         product.publish();
         return product;
     }

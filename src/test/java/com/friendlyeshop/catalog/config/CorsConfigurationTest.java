@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.friendlyeshop.catalog.controller.PublicationController;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
 import com.friendlyeshop.catalog.service.PublicationService;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -18,12 +18,14 @@ import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
-import com.friendlyeshop.catalog.model.dto.Publication;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationResponse;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
-import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublicationRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
+import com.friendlyeshop.catalog.model.dto.request.PublishCatalogRequest;
+import com.friendlyeshop.catalog.model.dto.out.PublishCatalogResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
@@ -262,7 +264,8 @@ class PublicationServiceTest {
     }
 
     private static Product publishedProduct(String name) {
-        Product product = Product.openNew(UUID.randomUUID(), name, new BigDecimal("10.00"), Currency.ARS, 5);
+        Product product = Product.openNew(UUID.randomUUID(),
+                new ProductDetails(name, null, new BigDecimal("10.00"), Currency.ARS, 5));
         product.publish();
         return product;
     }
@@ -296,7 +299,8 @@ class PublicationServiceTest {
 
     @Test
     void rejectsPublishingWithoutOwner() {
-        Product product = Product.openNew(null, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, null);
+        Product product = Product.openNew(null,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, null));
         stubFound(product);
 
         assertThatThrownBy(() -> service.publish(product.getOwnerAccountId(), product.getId()))
@@ -339,13 +343,14 @@ class PublicationServiceTest {
     @Test
     void publishesOwnerlessItemsAndAccountDrafts() {
         UUID owner = UUID.randomUUID();
-        Product draft = Product.openNew(owner, "Borrador", new BigDecimal("5.00"), Currency.ARS, null);
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador", null, new BigDecimal("5.00"), Currency.ARS, null));
         when(productRepository.findByOwnerAccountIdAndStageAndDeletedAtIsNull(owner, ProductStage.DRAFT))
                 .thenReturn(List.of(draft));
         lenient().when(productRepository.save(any(Product.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         PublishCatalogRequest request = new PublishCatalogRequest(
-                List.of(new Publication("Nuevo", new BigDecimal("8.00"), Currency.USD, 3)));
+                List.of(new PublicationRequest("Nuevo", new BigDecimal("8.00"), Currency.USD, 3)));
 
         PublishCatalogResponse response = service.publishCatalog(owner, request);
 
@@ -373,8 +378,70 @@ class PublicationServiceTest {
         assertThatThrownBy(() -> service.publish(owner, id)).isInstanceOf(ProductNotFoundException.class);
     }
 
+    @Test
+    void returnsVisiblePublicationDetail() {
+        Product product = publishedProduct("Café molido");
+        UUID imageId = UUID.randomUUID();
+        ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
+        when(productRepository.findPublicById(product.getId(), ProductStage.PUBLISHED, 0))
+                .thenReturn(Optional.of(product));
+        when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of(image));
+
+        PublicationDetailResponse response = service.detail(product.getId());
+
+        assertThat(response.id()).isEqualTo(product.getId());
+        assertThat(response.name()).isEqualTo("Café molido");
+        assertThat(response.price()).isEqualByComparingTo("10.00");
+        assertThat(response.currency()).isEqualTo(Currency.ARS);
+        assertThat(response.stock()).isEqualTo(5);
+        assertThat(response.sellerAccountId()).isEqualTo(product.getOwnerAccountId());
+        assertThat(response.images()).singleElement()
+                .satisfies(publicImage -> assertThat(publicImage.url())
+                        .isEqualTo("https://api.fes.test/catalog/images/" + imageId));
+    }
+
+    @Test
+    void returnsNullDescriptionWhenAbsent() {
+        Product product = publishedProduct("Zapatillas");
+        when(productRepository.findPublicById(product.getId(), ProductStage.PUBLISHED, 0))
+                .thenReturn(Optional.of(product));
+        when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of());
+
+        PublicationDetailResponse response = service.detail(product.getId());
+
+        assertThat(response.description()).isNull();
+        assertThat(response.images()).isEmpty();
+    }
+
+    @Test
+    void throwsNotFoundWhenPublicationDoesNotExistOrIsNotVisible() {
+        UUID id = UUID.randomUUID();
+        when(productRepository.findPublicById(id, ProductStage.PUBLISHED, 0)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.detail(id))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("La publicación no existe");
+        verifyNoInteractions(productImageRepository);
+    }
+
+    @Test
+    void detailDoesNotInvokeAnyWriteOperation() {
+        Product product = publishedProduct("Zapatillas");
+        when(productRepository.findPublicById(product.getId(), ProductStage.PUBLISHED, 0))
+                .thenReturn(Optional.of(product));
+        when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of());
+
+        service.detail(product.getId());
+
+        verify(productRepository, never()).save(any(Product.class));
+        verify(productRepository, never()).saveAll(any());
+        verify(productRepository, never()).delete(any(Product.class));
+        verify(productRepository, never()).deleteById(any(UUID.class));
+        verify(productRepository, never()).deleteAll();
+    }
+
     private Product ownedProduct(String name, BigDecimal price) {
-        return Product.openNew(UUID.randomUUID(), name, price, Currency.ARS, null);
+        return Product.openNew(UUID.randomUUID(), new ProductDetails(name, null, price, Currency.ARS, null));
     }
 
     private void stubFound(Product product) {

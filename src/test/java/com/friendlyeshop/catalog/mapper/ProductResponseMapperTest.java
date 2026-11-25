@@ -3,13 +3,15 @@ package com.friendlyeshop.catalog.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.friendlyeshop.catalog.config.CatalogProperties;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
-import com.friendlyeshop.catalog.model.dto.ProductResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
-import com.friendlyeshop.catalog.model.dto.PublicationResponse;
+import com.friendlyeshop.catalog.model.dto.out.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationDetailResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +27,8 @@ class ProductResponseMapperTest {
 
     @Test
     void buildsPublicImageUrl() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 4);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 4));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
@@ -39,7 +42,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsProductWithoutImages() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, null));
 
         ProductResponse response = mapper.toResponse(product, List.of());
 
@@ -50,7 +54,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsPublicationWithPublicImageUrlsOnly() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, 4);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, 4));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
@@ -69,7 +74,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsPublicationWithoutImagesToEmptyList() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 1);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 1));
 
         PublicationResponse response = mapper.toPublication(product, List.of());
 
@@ -78,8 +84,10 @@ class ProductResponseMapperTest {
 
     @Test
     void composesPublishedPageKeepingOrderAndTotals() {
-        Product first = Product.openNew(OWNER, "Primero", new BigDecimal("1.00"), Currency.ARS, 1);
-        Product second = Product.openNew(OWNER, "Segundo", new BigDecimal("2.00"), Currency.ARS, 2);
+        Product first = Product.openNew(OWNER,
+                new ProductDetails("Primero", null, new BigDecimal("1.00"), Currency.ARS, 1));
+        Product second = Product.openNew(OWNER,
+                new ProductDetails("Segundo", null, new BigDecimal("2.00"), Currency.ARS, 2));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, second.getId(), "products/s/1", "image/png");
 
@@ -103,5 +111,62 @@ class ProductResponseMapperTest {
         assertThat(page.totalItems()).isZero();
         assertThat(page.totalPages()).isZero();
         assertThat(page.page()).isEqualTo(5);
+    }
+
+    @Test
+    void includesDescriptionInPanelResponse() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", "Café de tueste medio", new BigDecimal("10.00"), Currency.ARS, 4));
+
+        ProductResponse response = mapper.toResponse(product, List.of());
+
+        assertThat(response.description()).isEqualTo("Café de tueste medio");
+        assertThat(response.ownerAccountId()).isEqualTo(OWNER);
+        assertThat(response.stage()).isEqualTo(ProductStage.DRAFT);
+    }
+
+    @Test
+    void mapsNullDescriptionInPanelResponse() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 4));
+
+        ProductResponse response = mapper.toResponse(product, List.of());
+
+        assertThat(response.description()).isNull();
+    }
+
+    @Test
+    void buildsPublicationDetailWithPublicSellerAndImages() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Café molido", "Café de tueste medio", new BigDecimal("1234.50"), Currency.ARS,
+                        7));
+        UUID imageId = UUID.randomUUID();
+        ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
+
+        PublicationDetailResponse response = mapper.toPublicationDetail(product, List.of(image));
+
+        assertThat(response.id()).isEqualTo(product.getId());
+        assertThat(response.name()).isEqualTo("Café molido");
+        assertThat(response.price()).isEqualByComparingTo("1234.50");
+        assertThat(response.currency()).isEqualTo(Currency.ARS);
+        assertThat(response.stock()).isEqualTo(7);
+        assertThat(response.description()).isEqualTo("Café de tueste medio");
+        assertThat(response.sellerAccountId()).isEqualTo(OWNER);
+        assertThat(response.images()).singleElement().satisfies(publicImage -> {
+            assertThat(publicImage.id()).isEqualTo(imageId);
+            assertThat(publicImage.url()).isEqualTo("https://api.fes.test/catalog/images/" + imageId);
+        });
+    }
+
+    @Test
+    void mapsPublicationDetailWithoutImagesToEmptyListAndNullDescription() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, null));
+
+        PublicationDetailResponse response = mapper.toPublicationDetail(product, List.of());
+
+        assertThat(response.images()).isEmpty();
+        assertThat(response.description()).isNull();
+        assertThat(response.stock()).isNull();
     }
 }

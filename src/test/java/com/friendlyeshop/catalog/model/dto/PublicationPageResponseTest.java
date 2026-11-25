@@ -2,6 +2,9 @@ package com.friendlyeshop.catalog.model.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.friendlyeshop.catalog.model.dto.out.ProductImageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationPageResponse;
+import com.friendlyeshop.catalog.model.dto.out.PublicationResponse;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import java.math.BigDecimal;
 import java.util.List;

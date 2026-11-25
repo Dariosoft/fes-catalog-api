@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.friendlyeshop.catalog.exception.InvalidProductException;
+import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import java.math.BigDecimal;
@@ -19,7 +20,7 @@ class ProductTest {
 
     @Test
     void isBornAsDraft() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, 10);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 10));
 
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
         assertThat(product.isDeleted()).isFalse();
@@ -27,7 +28,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresOwner() {
-        Product product = Product.openNew(null, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(null, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -35,7 +36,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresName() {
-        Product product = Product.openNew(OWNER, "  ", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("  ", null, PRICE, Currency.ARS, null));
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -43,7 +44,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresPrice() {
-        Product product = Product.openNew(OWNER, "Zapatillas", null, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, null, Currency.ARS, null));
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -51,7 +52,7 @@ class ProductTest {
 
     @Test
     void publishesWithOwnerNameAndPrice() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
 
         product.publish();
 
@@ -60,7 +61,7 @@ class ProductTest {
 
     @Test
     void unpublishingKeepsOwner() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
         product.publish();
 
         product.unpublish();
@@ -71,7 +72,7 @@ class ProductTest {
 
     @Test
     void logicalDeletionMarksDeletedAt() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
         Instant now = Instant.parse("2026-10-01T12:00:00Z");
 
         product.deleteLogically(now);
@@ -82,9 +83,77 @@ class ProductTest {
 
     @Test
     void belongsToMatchesOwner() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
 
         assertThat(product.belongsTo(OWNER)).isTrue();
         assertThat(product.belongsTo(UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void normalizesAbsentDescriptionToNull() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void normalizesBlankDescriptionToNull() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", "   ", PRICE, Currency.ARS, null));
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void normalizesEmptyDescriptionToNull() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", "", PRICE, Currency.ARS, null));
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void keepsDescriptionContentAndAccents() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", "Café de tueste medio", PRICE, Currency.ARS, null));
+
+        assertThat(product.getDescription()).isEqualTo("Café de tueste medio");
+    }
+
+    @Test
+    void stripsSurroundingWhitespaceFromDescription() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", "  Café  ", PRICE, Currency.ARS, null));
+
+        assertThat(product.getDescription()).isEqualTo("Café");
+    }
+
+    @Test
+    void updateNormalizesAndPreservesDescription() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", "Vieja", PRICE, Currency.ARS, null));
+
+        product.update(
+                new ProductDetails("Nuevas", "  Nueva descripción con acentos: ñandú  ", PRICE, Currency.USD, 2));
+
+        assertThat(product.getDescription()).isEqualTo("Nueva descripción con acentos: ñandú");
+    }
+
+    @Test
+    void updateBlanksDescriptionToNull() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", "Algo", PRICE, Currency.ARS, null));
+
+        product.update(new ProductDetails("Nuevas", "   ", PRICE, Currency.USD, 2));
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void publishingAndUnpublishingKeepDescription() {
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", "Descripción estable", PRICE, Currency.ARS, null));
+
+        product.publish();
+        assertThat(product.getDescription()).isEqualTo("Descripción estable");
+
+        product.unpublish();
+        assertThat(product.getDescription()).isEqualTo("Descripción estable");
     }
 }
