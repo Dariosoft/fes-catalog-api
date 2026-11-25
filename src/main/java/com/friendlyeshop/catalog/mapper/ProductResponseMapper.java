@@ -5,6 +5,7 @@ import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
 import com.friendlyeshop.catalog.model.dto.ProductImageResponse;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
 import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
 import com.friendlyeshop.catalog.model.dto.PublicationResponse;
 import com.friendlyeshop.catalog.util.UrlUtils;
@@ -29,6 +30,7 @@ public class ProductResponseMapper {
                 product.getId(),
                 product.getOwnerAccountId(),
                 product.getName(),
+                product.getDescription(),
                 product.getPrice(),
                 product.getCurrency(),
                 product.getStock(),
@@ -45,6 +47,18 @@ public class ProductResponseMapper {
                 product.getPrice(),
                 product.getCurrency(),
                 product.getStock(),
+                toImageResponses(images));
+    }
+
+    public PublicationDetailResponse toPublicationDetail(Product product, List<ProductImage> images) {
+        return new PublicationDetailResponse(
+                product.getId(),
+                product.getName(),
+                product.getPrice(),
+                product.getCurrency(),
+                product.getStock(),
+                product.getDescription(),
+                product.getOwnerAccountId(),
                 toImageResponses(images));
     }
 

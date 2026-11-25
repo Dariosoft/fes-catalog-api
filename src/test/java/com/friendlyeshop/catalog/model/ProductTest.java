@@ -19,7 +19,7 @@ class ProductTest {
 
     @Test
     void isBornAsDraft() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, 10);
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, 10, null);
 
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
         assertThat(product.isDeleted()).isFalse();
@@ -27,7 +27,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresOwner() {
-        Product product = Product.openNew(null, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(null, "Zapatillas", PRICE, Currency.ARS, null, null);
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -35,7 +35,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresName() {
-        Product product = Product.openNew(OWNER, "  ", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "  ", PRICE, Currency.ARS, null, null);
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -43,7 +43,7 @@ class ProductTest {
 
     @Test
     void publishingRequiresPrice() {
-        Product product = Product.openNew(OWNER, "Zapatillas", null, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "Zapatillas", null, Currency.ARS, null, null);
 
         assertThatThrownBy(product::publish).isInstanceOf(InvalidProductException.class);
         assertThat(product.getStage()).isEqualTo(ProductStage.DRAFT);
@@ -51,7 +51,7 @@ class ProductTest {
 
     @Test
     void publishesWithOwnerNameAndPrice() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, null);
 
         product.publish();
 
@@ -60,7 +60,7 @@ class ProductTest {
 
     @Test
     void unpublishingKeepsOwner() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, null);
         product.publish();
 
         product.unpublish();
@@ -71,7 +71,7 @@ class ProductTest {
 
     @Test
     void logicalDeletionMarksDeletedAt() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, null);
         Instant now = Instant.parse("2026-10-01T12:00:00Z");
 
         product.deleteLogically(now);
@@ -82,9 +82,73 @@ class ProductTest {
 
     @Test
     void belongsToMatchesOwner() {
-        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null);
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, null);
 
         assertThat(product.belongsTo(OWNER)).isTrue();
         assertThat(product.belongsTo(UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void normalizesAbsentDescriptionToNull() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, null);
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void normalizesBlankDescriptionToNull() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "   ");
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void normalizesEmptyDescriptionToNull() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "");
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void keepsDescriptionContentAndAccents() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "Café de tueste medio");
+
+        assertThat(product.getDescription()).isEqualTo("Café de tueste medio");
+    }
+
+    @Test
+    void stripsSurroundingWhitespaceFromDescription() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "  Café  ");
+
+        assertThat(product.getDescription()).isEqualTo("Café");
+    }
+
+    @Test
+    void updateNormalizesAndPreservesDescription() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "Vieja");
+
+        product.update("Nuevas", PRICE, Currency.USD, 2, "  Nueva descripción con acentos: ñandú  ");
+
+        assertThat(product.getDescription()).isEqualTo("Nueva descripción con acentos: ñandú");
+    }
+
+    @Test
+    void updateBlanksDescriptionToNull() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "Algo");
+
+        product.update("Nuevas", PRICE, Currency.USD, 2, "   ");
+
+        assertThat(product.getDescription()).isNull();
+    }
+
+    @Test
+    void publishingAndUnpublishingKeepDescription() {
+        Product product = Product.openNew(OWNER, "Zapatillas", PRICE, Currency.ARS, null, "Descripción estable");
+
+        product.publish();
+        assertThat(product.getDescription()).isEqualTo("Descripción estable");
+
+        product.unpublish();
+        assertThat(product.getDescription()).isEqualTo("Descripción estable");
     }
 }

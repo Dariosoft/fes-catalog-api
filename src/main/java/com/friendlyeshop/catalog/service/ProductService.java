@@ -45,7 +45,8 @@ public class ProductService {
     @Transactional
     public ProductResponse create(UUID ownerAccountId, ProductForm form) {
         validateForm(form);
-        Product product = Product.openNew(ownerAccountId, form.name(), form.price(), form.currency(), form.stock());
+        Product product = Product.openNew(ownerAccountId, form.name(), form.price(), form.currency(), form.stock(),
+                form.description());
         productRepository.save(product);
         List<ProductImage> images = storeImages(product.getId(), form.images());
         return responseMapper.toResponse(product, images);
@@ -67,7 +68,7 @@ public class ProductService {
     public ProductResponse update(UUID ownerAccountId, UUID id, ProductForm form) {
         validateForm(form);
         Product product = productLookup.findOwned(ownerAccountId, id);
-        product.update(form.name(), form.price(), form.currency(), form.stock());
+        product.update(form.name(), form.price(), form.currency(), form.stock(), form.description());
         List<ProductImage> images = new ArrayList<>(productImageRepository.findByProductId(product.getId()));
         images.addAll(storeImages(product.getId(), form.images()));
         return responseMapper.toResponse(product, images);

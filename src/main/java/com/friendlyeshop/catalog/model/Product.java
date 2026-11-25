@@ -34,6 +34,9 @@ public class Product {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
+    @Column(name = "description", length = 1000)
+    private String description;
+
     @Column(name = "price", nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
@@ -65,11 +68,12 @@ public class Product {
     }
 
     public static Product openNew(UUID ownerAccountId, String name, BigDecimal price, Currency currency,
-            Integer stock) {
+            Integer stock, String description) {
         Product product = new Product();
         product.id = UUID.randomUUID();
         product.ownerAccountId = ownerAccountId;
         product.name = name;
+        product.description = normalizeDescription(description);
         product.price = price;
         product.currency = currency;
         product.stock = stock;
@@ -77,11 +81,19 @@ public class Product {
         return product;
     }
 
-    public void update(String name, BigDecimal price, Currency currency, Integer stock) {
+    public void update(String name, BigDecimal price, Currency currency, Integer stock, String description) {
         this.name = name;
         this.price = price;
         this.currency = currency;
         this.stock = stock;
+        this.description = normalizeDescription(description);
+    }
+
+    private static String normalizeDescription(String description) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+        return description.strip();
     }
 
     public void publish() {

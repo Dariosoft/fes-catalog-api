@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -152,8 +153,64 @@ class ProductControllerWebTest {
                 .andExpect(jsonPath("$.error").value("almacenamiento_no_disponible"));
     }
 
+    @Test
+    void createsProductWithDescription() throws Exception {
+        UUID owner = UUID.randomUUID();
+        when(productService.create(any(), any())).thenReturn(responseWithDescription("Café de tueste medio"));
+
+        mockMvc.perform(multipart("/catalog/products")
+                        .param("name", "Zapatillas")
+                        .param("description", "Café de tueste medio")
+                        .param("price", "10.00")
+                        .param("currency", "ARS")
+                        .param("ownerAccountId", owner.toString()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.description").value("Café de tueste medio"));
+
+        ArgumentCaptor<ProductForm> captor = ArgumentCaptor.forClass(ProductForm.class);
+        verify(productService).create(eq(owner), captor.capture());
+        assertThat(captor.getValue().description()).isEqualTo("Café de tueste medio");
+    }
+
+    @Test
+    void updatesProductWithDescription() throws Exception {
+        UUID owner = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        when(productService.update(any(), any(), any())).thenReturn(responseWithDescription("Nueva"));
+
+        mockMvc.perform(multipart(HttpMethod.PUT, "/catalog/products/{id}", id)
+                        .param("name", "Nuevas")
+                        .param("description", "Nueva")
+                        .param("price", "12.00")
+                        .param("currency", "USD")
+                        .param("ownerAccountId", owner.toString()))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<ProductForm> captor = ArgumentCaptor.forClass(ProductForm.class);
+        verify(productService).update(eq(owner), eq(id), captor.capture());
+        assertThat(captor.getValue().description()).isEqualTo("Nueva");
+    }
+
+    @Test
+    void rejectsDescriptionLongerThanTheMaximum() throws Exception {
+        mockMvc.perform(multipart("/catalog/products")
+                        .param("name", "Zapatillas")
+                        .param("description", "a".repeat(1001))
+                        .param("price", "10.00")
+                        .param("currency", "ARS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("datos_invalidos"));
+
+        verify(productService, never()).create(any(), any());
+    }
+
+    private ProductResponse responseWithDescription(String description) {
+        return new ProductResponse(UUID.randomUUID(), UUID.randomUUID(), "Zapatillas", description,
+                new BigDecimal("10.00"), Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
+    }
+
     private ProductResponse response() {
-        return new ProductResponse(UUID.randomUUID(), UUID.randomUUID(), "Zapatillas", new BigDecimal("10.00"),
-                Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
+        return new ProductResponse(UUID.randomUUID(), UUID.randomUUID(), "Zapatillas", null,
+                new BigDecimal("10.00"), Currency.ARS, 3, ProductStage.DRAFT, List.of(), Instant.now(), Instant.now());
     }
 }

@@ -92,7 +92,7 @@ class ProductServiceTest {
 
     @Test
     void rejectsMissingCurrency() {
-        ProductForm form = new ProductForm("Zapatillas", new BigDecimal("10.00"), null, null, List.of());
+        ProductForm form = new ProductForm("Zapatillas", null, new BigDecimal("10.00"), null, null, List.of());
 
         assertThatThrownBy(() -> service.create(UUID.randomUUID(), form))
                 .isInstanceOf(InvalidProductException.class);
@@ -101,7 +101,7 @@ class ProductServiceTest {
     @Test
     void listsOwnedProducts() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null);
+        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null, null);
         Page<Product> page = new PageImpl<>(List.of(product));
         when(productRepository.findByOwnerAccountIdAndDeletedAtIsNull(eq(owner), any(Pageable.class)))
                 .thenReturn(page);
@@ -142,14 +142,14 @@ class ProductServiceTest {
     @Test
     void updatesOwnedProduct() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Viejo", new BigDecimal("5.00"), Currency.ARS, 1);
+        Product product = Product.openNew(owner, "Viejo", new BigDecimal("5.00"), Currency.ARS, 1, null);
         when(productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(product.getId(), owner))
                 .thenReturn(Optional.of(product));
         lenient().when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of());
         stubSaves();
 
         ProductResponse response = service.update(owner, product.getId(),
-                new ProductForm("Nuevo", new BigDecimal("9.00"), Currency.USD, 2, List.of()));
+                new ProductForm("Nuevo", null, new BigDecimal("9.00"), Currency.USD, 2, List.of()));
 
         assertThat(response.name()).isEqualTo("Nuevo");
         assertThat(response.currency()).isEqualTo(Currency.USD);
@@ -159,7 +159,7 @@ class ProductServiceTest {
     @Test
     void deletesLogicallyOwnedProduct() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null);
+        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null, null);
         when(productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(product.getId(), owner))
                 .thenReturn(Optional.of(product));
 
@@ -194,7 +194,7 @@ class ProductServiceTest {
     }
 
     private ProductForm form(List<MultipartFile> images) {
-        return new ProductForm("Zapatillas", new BigDecimal("10.00"), Currency.ARS, 3, images);
+        return new ProductForm("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 3, images);
     }
 
     private static final class FakeImageStorage implements ImageStorage {

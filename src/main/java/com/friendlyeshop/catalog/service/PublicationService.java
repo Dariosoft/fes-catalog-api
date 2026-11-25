@@ -1,10 +1,12 @@
 package com.friendlyeshop.catalog.service;
 
+import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.model.dto.Publication;
+import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
 import com.friendlyeshop.catalog.model.dto.PublicationPageResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
@@ -84,6 +86,14 @@ public class PublicationService {
         return responseMapper.toResponse(product, productImageRepository.findByProductId(product.getId()));
     }
 
+    @Transactional(readOnly = true)
+    public PublicationDetailResponse detail(UUID id) {
+        Product product = productRepository.findPublicById(id, ProductStage.PUBLISHED, MINIMUM_STOCK)
+                .orElseThrow(() -> new ProductNotFoundException("La publicación no existe"));
+        List<ProductImage> images = productImageRepository.findByProductId(product.getId());
+        return responseMapper.toPublicationDetail(product, images);
+    }
+
     @Transactional
     public PublishCatalogResponse publishCatalog(UUID ownerAccountId, PublishCatalogRequest request) {
         int published = publishOwnerlessProducts(ownerAccountId, request);
@@ -96,7 +106,7 @@ public class PublicationService {
             return 0;
         }
         for (Publication item : request.products()) {
-            Product product = Product.openNew(null, item.name(), item.price(), item.currency(), item.stock());
+            Product product = Product.openNew(null, item.name(), item.price(), item.currency(), item.stock(), null);
             product.takeOwnership(ownerAccountId);
             product.publish();
             productRepository.save(product);

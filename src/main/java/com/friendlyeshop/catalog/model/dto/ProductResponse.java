@@ -11,6 +11,7 @@ public record ProductResponse(
         UUID id,
         UUID ownerAccountId,
         String name,
+        String description,
         BigDecimal price,
         Currency currency,
         Integer stock,
