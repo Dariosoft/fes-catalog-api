@@ -15,6 +15,7 @@ import com.friendlyeshop.catalog.config.CatalogProperties;
 import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
+import com.friendlyeshop.catalog.model.dto.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
@@ -101,7 +102,8 @@ class ProductServiceTest {
     @Test
     void listsOwnedProducts() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null, null);
+        Product product = Product.openNew(owner,
+                new ProductDetails("Zapatillas", null, new BigDecimal("5.00"), Currency.ARS, null));
         Page<Product> page = new PageImpl<>(List.of(product));
         when(productRepository.findByOwnerAccountIdAndDeletedAtIsNull(eq(owner), any(Pageable.class)))
                 .thenReturn(page);
@@ -142,7 +144,8 @@ class ProductServiceTest {
     @Test
     void updatesOwnedProduct() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Viejo", new BigDecimal("5.00"), Currency.ARS, 1, null);
+        Product product = Product.openNew(owner,
+                new ProductDetails("Viejo", null, new BigDecimal("5.00"), Currency.ARS, 1));
         when(productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(product.getId(), owner))
                 .thenReturn(Optional.of(product));
         lenient().when(productImageRepository.findByProductId(product.getId())).thenReturn(List.of());
@@ -159,7 +162,8 @@ class ProductServiceTest {
     @Test
     void deletesLogicallyOwnedProduct() {
         UUID owner = UUID.randomUUID();
-        Product product = Product.openNew(owner, "Zapatillas", new BigDecimal("5.00"), Currency.ARS, null, null);
+        Product product = Product.openNew(owner,
+                new ProductDetails("Zapatillas", null, new BigDecimal("5.00"), Currency.ARS, null));
         when(productRepository.findByIdAndOwnerAccountIdAndDeletedAtIsNull(product.getId(), owner))
                 .thenReturn(Optional.of(product));
 

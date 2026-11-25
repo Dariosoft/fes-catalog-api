@@ -4,6 +4,7 @@ import com.friendlyeshop.catalog.exception.ProductNotFoundException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
+import com.friendlyeshop.catalog.model.dto.ProductDetails;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.model.dto.Publication;
 import com.friendlyeshop.catalog.model.dto.PublicationDetailResponse;
@@ -106,7 +107,8 @@ public class PublicationService {
             return 0;
         }
         for (Publication item : request.products()) {
-            Product product = Product.openNew(null, item.name(), item.price(), item.currency(), item.stock(), null);
+            Product product = Product.openNew(null,
+                    new ProductDetails(item.name(), null, item.price(), item.currency(), item.stock()));
             product.takeOwnership(ownerAccountId);
             product.publish();
             productRepository.save(product);

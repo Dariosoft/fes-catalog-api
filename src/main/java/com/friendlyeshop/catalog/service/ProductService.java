@@ -6,6 +6,7 @@ import com.friendlyeshop.catalog.exception.InvalidProductException;
 import com.friendlyeshop.catalog.mapper.ProductResponseMapper;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
+import com.friendlyeshop.catalog.model.dto.ProductDetails;
 import com.friendlyeshop.catalog.model.dto.ProductForm;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
@@ -45,8 +46,7 @@ public class ProductService {
     @Transactional
     public ProductResponse create(UUID ownerAccountId, ProductForm form) {
         validateForm(form);
-        Product product = Product.openNew(ownerAccountId, form.name(), form.price(), form.currency(), form.stock(),
-                form.description());
+        Product product = Product.openNew(ownerAccountId, ProductDetails.from(form));
         productRepository.save(product);
         List<ProductImage> images = storeImages(product.getId(), form.images());
         return responseMapper.toResponse(product, images);
@@ -68,7 +68,7 @@ public class ProductService {
     public ProductResponse update(UUID ownerAccountId, UUID id, ProductForm form) {
         validateForm(form);
         Product product = productLookup.findOwned(ownerAccountId, id);
-        product.update(form.name(), form.price(), form.currency(), form.stock(), form.description());
+        product.update(ProductDetails.from(form));
         List<ProductImage> images = new ArrayList<>(productImageRepository.findByProductId(product.getId()));
         images.addAll(storeImages(product.getId(), form.images()));
         return responseMapper.toResponse(product, images);

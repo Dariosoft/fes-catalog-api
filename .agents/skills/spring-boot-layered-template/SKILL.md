@@ -23,10 +23,12 @@ The folder should express the class's main responsibility.
 Use the basic folders for obvious cases:
 
 - `controller/`: HTTP endpoints, request-to-use-case conversion, response building.
+- Every `@RestController` declares its own `rootPath` with a class-level `@RequestMapping` (for example `/products`, `/publication`, `/shop`); method mappings stay relative to it.
 - `service/`: use cases, business orchestration, coordination between repositories, models, validations, and external clients.
 - `repository/`: persistence access.
 - `model/`: persistence entities (the database models).
 - `model/dto/`: transport objects that enter or leave through APIs, events, or external contracts.
+- For multi-field use-case inputs, pass a single command or value record (for example `ShopDetails`, `ProductDetails`) instead of positional parameters; adding a field then changes the record and its mapping, not every call site.
 - `model/enums/`: enums used by models and DTOs.
 - `model/converters/`: converters (for example, JPA `AttributeConverter`) that map a model value to/from its stored representation.
 - `config/`: properties, beans, framework configuration, CORS, security, serializers, clients configured as infrastructure.

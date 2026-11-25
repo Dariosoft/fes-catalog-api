@@ -3,6 +3,7 @@ package com.friendlyeshop.catalog.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.friendlyeshop.catalog.config.CatalogProperties;
+import com.friendlyeshop.catalog.model.dto.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
@@ -26,7 +27,8 @@ class ProductResponseMapperTest {
 
     @Test
     void buildsPublicImageUrl() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 4, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 4));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
@@ -40,7 +42,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsProductWithoutImages() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, null, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, null));
 
         ProductResponse response = mapper.toResponse(product, List.of());
 
@@ -51,7 +54,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsPublicationWithPublicImageUrlsOnly() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, 4, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, 4));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
@@ -70,7 +74,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsPublicationWithoutImagesToEmptyList() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 1, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 1));
 
         PublicationResponse response = mapper.toPublication(product, List.of());
 
@@ -79,8 +84,10 @@ class ProductResponseMapperTest {
 
     @Test
     void composesPublishedPageKeepingOrderAndTotals() {
-        Product first = Product.openNew(OWNER, "Primero", new BigDecimal("1.00"), Currency.ARS, 1, null);
-        Product second = Product.openNew(OWNER, "Segundo", new BigDecimal("2.00"), Currency.ARS, 2, null);
+        Product first = Product.openNew(OWNER,
+                new ProductDetails("Primero", null, new BigDecimal("1.00"), Currency.ARS, 1));
+        Product second = Product.openNew(OWNER,
+                new ProductDetails("Segundo", null, new BigDecimal("2.00"), Currency.ARS, 2));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, second.getId(), "products/s/1", "image/png");
 
@@ -108,8 +115,8 @@ class ProductResponseMapperTest {
 
     @Test
     void includesDescriptionInPanelResponse() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 4,
-                "Café de tueste medio");
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", "Café de tueste medio", new BigDecimal("10.00"), Currency.ARS, 4));
 
         ProductResponse response = mapper.toResponse(product, List.of());
 
@@ -120,7 +127,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsNullDescriptionInPanelResponse() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, 4, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, 4));
 
         ProductResponse response = mapper.toResponse(product, List.of());
 
@@ -129,8 +137,9 @@ class ProductResponseMapperTest {
 
     @Test
     void buildsPublicationDetailWithPublicSellerAndImages() {
-        Product product = Product.openNew(OWNER, "Café molido", new BigDecimal("1234.50"), Currency.ARS, 7,
-                "Café de tueste medio");
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Café molido", "Café de tueste medio", new BigDecimal("1234.50"), Currency.ARS,
+                        7));
         UUID imageId = UUID.randomUUID();
         ProductImage image = ProductImage.of(imageId, product.getId(), "products/a/b", "image/png");
 
@@ -151,7 +160,8 @@ class ProductResponseMapperTest {
 
     @Test
     void mapsPublicationDetailWithoutImagesToEmptyListAndNullDescription() {
-        Product product = Product.openNew(OWNER, "Zapatillas", new BigDecimal("10.00"), Currency.USD, null, null);
+        Product product = Product.openNew(OWNER,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.USD, null));
 
         PublicationDetailResponse response = mapper.toPublicationDetail(product, List.of());
 

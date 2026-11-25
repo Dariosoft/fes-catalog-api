@@ -25,6 +25,7 @@ import com.friendlyeshop.catalog.model.dto.PublicationResponse;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogRequest;
 import com.friendlyeshop.catalog.model.dto.PublishCatalogResponse;
 import com.friendlyeshop.catalog.model.dto.ProductResponse;
+import com.friendlyeshop.catalog.model.dto.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
 import com.friendlyeshop.catalog.repository.ProductImageRepository;
@@ -263,7 +264,8 @@ class PublicationServiceTest {
     }
 
     private static Product publishedProduct(String name) {
-        Product product = Product.openNew(UUID.randomUUID(), name, new BigDecimal("10.00"), Currency.ARS, 5, null);
+        Product product = Product.openNew(UUID.randomUUID(),
+                new ProductDetails(name, null, new BigDecimal("10.00"), Currency.ARS, 5));
         product.publish();
         return product;
     }
@@ -297,7 +299,8 @@ class PublicationServiceTest {
 
     @Test
     void rejectsPublishingWithoutOwner() {
-        Product product = Product.openNew(null, "Zapatillas", new BigDecimal("10.00"), Currency.ARS, null, null);
+        Product product = Product.openNew(null,
+                new ProductDetails("Zapatillas", null, new BigDecimal("10.00"), Currency.ARS, null));
         stubFound(product);
 
         assertThatThrownBy(() -> service.publish(product.getOwnerAccountId(), product.getId()))
@@ -340,7 +343,8 @@ class PublicationServiceTest {
     @Test
     void publishesOwnerlessItemsAndAccountDrafts() {
         UUID owner = UUID.randomUUID();
-        Product draft = Product.openNew(owner, "Borrador", new BigDecimal("5.00"), Currency.ARS, null, null);
+        Product draft = Product.openNew(owner,
+                new ProductDetails("Borrador", null, new BigDecimal("5.00"), Currency.ARS, null));
         when(productRepository.findByOwnerAccountIdAndStageAndDeletedAtIsNull(owner, ProductStage.DRAFT))
                 .thenReturn(List.of(draft));
         lenient().when(productRepository.save(any(Product.class)))
@@ -437,7 +441,7 @@ class PublicationServiceTest {
     }
 
     private Product ownedProduct(String name, BigDecimal price) {
-        return Product.openNew(UUID.randomUUID(), name, price, Currency.ARS, null, null);
+        return Product.openNew(UUID.randomUUID(), new ProductDetails(name, null, price, Currency.ARS, null));
     }
 
     private void stubFound(Product product) {
