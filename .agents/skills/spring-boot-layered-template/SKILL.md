@@ -142,6 +142,7 @@ When `messaging/rabbit/` grows beyond a single adapter, split it by responsibili
 - `model/`: broker payload records, including nested message items.
 - `listener/`: `@RabbitListener` consumers.
 - `reader/`: tolerant readers or parsers for broker payloads.
+- `codec/`: encoders or decoders for a specific broker payload when serialization is a separate responsibility.
 - `publisher/`: publishers and dead-letter publishers.
 - Keep shared, cross-cutting retry helpers (for example `RetryAttempts`) at the
   `messaging/rabbit/` root.
@@ -261,6 +262,7 @@ Before creating or moving a class, answer:
 - Is it a broker payload? `messaging/rabbit/model/`.
 - Does it consume a queue? `messaging/rabbit/listener/`.
 - Does it parse a broker payload? `messaging/rabbit/reader/`.
+- Does it encode or decode a broker payload? `messaging/rabbit/codec/`.
 - Does it publish to an exchange or queue? `messaging/rabbit/publisher/`.
 - Is it a shared retry helper used by broker adapters? `messaging/rabbit/` root.
 - Does it represent an application-owned event? `event/`.
