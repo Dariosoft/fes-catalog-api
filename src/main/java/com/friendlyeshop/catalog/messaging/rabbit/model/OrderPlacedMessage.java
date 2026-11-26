@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.model;
 
 import java.util.List;
 import java.util.UUID;

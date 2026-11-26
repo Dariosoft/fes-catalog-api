@@ -8,8 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.friendlyeshop.catalog.messaging.rabbit.OrderPlacedItem;
-import com.friendlyeshop.catalog.messaging.rabbit.OrderPlacedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedItem;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedMessage;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.model.dto.in.ProductDetails;

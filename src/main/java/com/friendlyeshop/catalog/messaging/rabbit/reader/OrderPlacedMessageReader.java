@@ -1,5 +1,7 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.reader;
 
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedItem;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

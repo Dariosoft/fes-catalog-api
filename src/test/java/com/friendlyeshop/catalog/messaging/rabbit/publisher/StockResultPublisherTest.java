@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.publisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,6 +8,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 import com.friendlyeshop.catalog.exception.StockResultPublishException;
+import com.friendlyeshop.catalog.messaging.rabbit.model.StockRejectedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.model.StockReservedMessage;
 import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.model.enums.RejectionReason;
 import java.time.Instant;

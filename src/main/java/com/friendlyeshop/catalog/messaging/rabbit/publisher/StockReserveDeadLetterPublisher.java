@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.publisher;
 
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;

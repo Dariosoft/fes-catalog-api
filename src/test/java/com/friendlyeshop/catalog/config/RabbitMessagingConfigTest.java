@@ -2,7 +2,7 @@ package com.friendlyeshop.catalog.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.friendlyeshop.catalog.messaging.rabbit.StockReservedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.model.StockReservedMessage;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;

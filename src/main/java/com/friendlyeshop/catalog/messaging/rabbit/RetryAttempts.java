@@ -6,7 +6,7 @@ import org.springframework.amqp.core.Message;
 
 public final class RetryAttempts {
 
-    static final String RETRY_QUEUE = "stock.reserve.retry";
+    public static final String RETRY_QUEUE = "stock.reserve.retry";
 
     private RetryAttempts() {
     }

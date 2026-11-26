@@ -1,5 +1,10 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.listener;
 
+import com.friendlyeshop.catalog.messaging.rabbit.RetryAttempts;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.publisher.StockReserveDeadLetterPublisher;
+import com.friendlyeshop.catalog.messaging.rabbit.publisher.StockResultPublisher;
+import com.friendlyeshop.catalog.messaging.rabbit.reader.OrderPlacedMessageReader;
 import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.service.StockReservationService;
 import com.rabbitmq.client.Channel;

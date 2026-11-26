@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.model;
 
 import com.friendlyeshop.catalog.model.StockReservation;
 import java.time.Instant;

@@ -68,9 +68,10 @@ dependencia nueva.
 
 - [x] **T7. Payloads de entrada y `OrderPlacedMessageReader`**
   - Cubre: RF-2, RF-14, RF-18, RF-26, RF-27
-  - Crear en `messaging/rabbit/` los records `OrderPlacedMessage(UUID eventId, UUID
+  - Crear en `messaging/rabbit/model/` los records `OrderPlacedMessage(UUID eventId, UUID
     orderId, List<OrderPlacedItem> items)` y `OrderPlacedItem(UUID productId, Integer
-    quantity)`, y `OrderPlacedMessageReader` que lea el JSON de forma tolerante:
+    quantity)`, y `messaging/rabbit/reader/OrderPlacedMessageReader` que lea el JSON de
+    forma tolerante:
     `orderId` obligatorio y UUID; `eventId` opcional; `items` ausente o no lista se
     convierte en lista vacía; `productId` inválido se deja nulo; `quantity` no numérica o
     fuera de rango se deja nula; los campos extra se ignoran.
@@ -80,15 +81,16 @@ dependencia nueva.
 
 - [x] **T8. Payloads de resultado**
   - Cubre: RF-6, RF-7, RF-19
-  - Crear `StockReservedMessage(UUID eventId, UUID orderId, Instant reservedAt)` y
-    `StockRejectedMessage(UUID eventId, UUID orderId, RejectionReason reason, Instant
-    rejectedAt)`, cada uno con una fábrica `from(StockReservation)`.
+  - Crear en `messaging/rabbit/model/` `StockReservedMessage(UUID eventId, UUID orderId,
+    Instant reservedAt)` y `StockRejectedMessage(UUID eventId, UUID orderId,
+    RejectionReason reason, Instant rejectedAt)`, cada uno con una fábrica
+    `from(StockReservation)`.
   - Done when: las fábricas producen exactamente los campos del contrato, `reason` se
     serializa como el nombre del enum y `eventId` puede ser nulo.
 
 - [x] **T9. `StockResultPublisher`**
   - Cubre: RF-6, RF-7, RF-16, RF-19
-  - Crear `messaging/rabbit/StockResultPublisher` con `RabbitTemplate`; publicar
+  - Crear `messaging/rabbit/publisher/StockResultPublisher` con `RabbitTemplate`; publicar
     `stock.reserved` o `stock.rejected` en el exchange `stock` según el estado, usando
     `CorrelationData` y esperando la confirmación del broker con un timeout.
   - Done when: un test con `RabbitTemplate` mock verifica exchange, routing key y payload
@@ -145,7 +147,7 @@ dependencia nueva.
 
 - [x] **T15. `OrderPlacedListener`: lectura y NACK sin `orderId`**
   - Cubre: RF-1, RF-18
-  - Crear `messaging/rabbit/OrderPlacedListener` con
+  - Crear `messaging/rabbit/listener/OrderPlacedListener` con
     `@RabbitListener(queues = "stock.reserve")` y firma `(Message, Channel)`. Leer el
     cuerpo con el reader; si devuelve vacío, `basicNack(deliveryTag, false, false)` y
     terminar sin publicar ni persistir.

@@ -104,15 +104,19 @@ src/main/java/com/friendlyeshop/catalog
 │       ├── ReservationStatus                # NUEVO RESERVED/REJECTED          RF-3,19
 │       └── RejectionReason                  # NUEVO vocabulario de reason      RF-19
 ├── messaging/rabbit/                        # NUEVO                            RF-1,2,6,18
-│   ├── OrderPlacedListener                  # consumidor con ACK/NACK manual    RF-1,3,16,17,18
-│   ├── OrderPlacedMessageReader             # parseo tolerante del JSON         RF-18,26
-│   ├── OrderPlacedMessage                   # eventId, orderId, items           RF-2
-│   ├── OrderPlacedItem                      # productId, quantity               RF-2,14,27
-│   ├── StockResultPublisher                 # publica reserved/rejected         RF-6,7
-│   ├── StockReserveDeadLetterPublisher      # publica en stock.reserve.dlq      RF-16,17,18
-│   ├── RetryAttempts                        # cuenta x-death                    RF-16,17,18
-│   ├── StockReservedMessage                 # eventId, orderId, reservedAt      RF-6
-│   └── StockRejectedMessage                 # eventId, orderId, reason, rejectedAt RF-7,19
+│   ├── listener/
+│   │   └── OrderPlacedListener              # consumidor con ACK/NACK manual    RF-1,3,16,17,18
+│   ├── reader/
+│   │   └── OrderPlacedMessageReader         # parseo tolerante del JSON         RF-18,26
+│   ├── model/
+│   │   ├── OrderPlacedMessage               # eventId, orderId, items           RF-2
+│   │   ├── OrderPlacedItem                  # productId, quantity               RF-2,14,27
+│   │   ├── StockReservedMessage             # eventId, orderId, reservedAt      RF-6
+│   │   └── StockRejectedMessage             # eventId, orderId, reason, rejectedAt RF-7,19
+│   ├── publisher/
+│   │   ├── StockResultPublisher             # publica reserved/rejected         RF-6,7
+│   │   └── StockReserveDeadLetterPublisher  # publica en stock.reserve.dlq      RF-16,17,18
+│   └── RetryAttempts                        # cuenta x-death                    RF-16,17,18
 ├── config/
 │   └── RabbitMessagingConfig                # convertidor JSON y confirms       RF-6,16
 ├── exception/                               # sin cambios HTTP                  RF-20
@@ -128,7 +132,9 @@ src/main/resources/
 Decisiones de ubicación según `/spring-boot-layered-template`:
 
 - `messaging/rabbit/` agrupa al consumidor, al publicador y a los payloads del broker;
-  son detalles de protocolo y no eventos de dominio. No se mezclan con `model/`.
+  se subdivide por responsabilidad en `listener/`, `reader/`, `model/` y `publisher/`.
+  `RetryAttempts` queda en la raíz porque es un helper transversal a los listeners. Son
+  detalles de protocolo y no eventos de dominio; no se mezclan con `model/`.
 - `StockReservationService` vive en `service/` porque coordina el caso de uso, los
   bloqueos, las validaciones y la persistencia del resultado.
 - `StockReservation` es una entidad de persistencia en `model/`; los enums de estado y

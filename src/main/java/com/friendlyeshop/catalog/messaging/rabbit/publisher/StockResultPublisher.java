@@ -1,6 +1,8 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.publisher;
 
 import com.friendlyeshop.catalog.exception.StockResultPublishException;
+import com.friendlyeshop.catalog.messaging.rabbit.model.StockRejectedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.model.StockReservedMessage;
 import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.model.enums.ReservationStatus;
 import java.util.concurrent.ExecutionException;

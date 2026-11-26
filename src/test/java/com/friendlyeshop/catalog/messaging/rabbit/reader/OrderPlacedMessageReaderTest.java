@@ -1,7 +1,9 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedItem;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedMessage;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;

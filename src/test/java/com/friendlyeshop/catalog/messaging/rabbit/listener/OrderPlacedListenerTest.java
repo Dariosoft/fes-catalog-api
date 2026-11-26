@@ -1,4 +1,4 @@
-package com.friendlyeshop.catalog.messaging.rabbit;
+package com.friendlyeshop.catalog.messaging.rabbit.listener;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -8,6 +8,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.friendlyeshop.catalog.messaging.rabbit.RetryAttempts;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedItem;
+import com.friendlyeshop.catalog.messaging.rabbit.model.OrderPlacedMessage;
+import com.friendlyeshop.catalog.messaging.rabbit.publisher.StockReserveDeadLetterPublisher;
+import com.friendlyeshop.catalog.messaging.rabbit.publisher.StockResultPublisher;
+import com.friendlyeshop.catalog.messaging.rabbit.reader.OrderPlacedMessageReader;
 import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.model.enums.RejectionReason;
 import com.friendlyeshop.catalog.service.StockReservationService;
