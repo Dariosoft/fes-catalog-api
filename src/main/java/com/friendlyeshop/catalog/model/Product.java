@@ -129,6 +129,24 @@ public class Product {
         return Objects.equals(ownerAccountId, accountId);
     }
 
+    public boolean isReservable() {
+        return stage == ProductStage.PUBLISHED && deletedAt == null;
+    }
+
+    public boolean canCover(int quantity) {
+        return stock == null || stock >= quantity;
+    }
+
+    public void reserve(int quantity) {
+        if (stock == null) {
+            return;
+        }
+        if (stock < quantity) {
+            throw new IllegalStateException("Insufficient stock");
+        }
+        stock = stock - quantity;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

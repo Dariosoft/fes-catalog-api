@@ -15,6 +15,12 @@ spring:
     username: ${RABBITMQ_USERNAME:catalog}
     password: ${RABBITMQ_PASSWORD:catalog-local}
     virtual-host: ${RABBITMQ_VIRTUAL_HOST:friendly}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        default-requeue-rejected: false
   servlet:
     multipart:
       max-file-size: 2MB

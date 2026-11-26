@@ -156,4 +156,71 @@ class ProductTest {
         product.unpublish();
         assertThat(product.getDescription()).isEqualTo("Descripción estable");
     }
+
+    @Test
+    void publishedProductIsReservable() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 3));
+        product.publish();
+
+        assertThat(product.isReservable()).isTrue();
+    }
+
+    @Test
+    void draftProductIsNotReservable() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 3));
+
+        assertThat(product.isReservable()).isFalse();
+    }
+
+    @Test
+    void deletedProductIsNotReservable() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 3));
+        product.publish();
+        product.deleteLogically(Instant.now());
+
+        assertThat(product.isReservable()).isFalse();
+    }
+
+    @Test
+    void unknownStockCoversAnyQuantity() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
+
+        assertThat(product.canCover(1)).isTrue();
+        assertThat(product.canCover(Integer.MAX_VALUE)).isTrue();
+    }
+
+    @Test
+    void knownStockCoversOnlyUpToAvailableUnits() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 5));
+
+        assertThat(product.canCover(4)).isTrue();
+        assertThat(product.canCover(5)).isTrue();
+        assertThat(product.canCover(6)).isFalse();
+    }
+
+    @Test
+    void reservingReducesStock() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 5));
+
+        product.reserve(3);
+
+        assertThat(product.getStock()).isEqualTo(2);
+    }
+
+    @Test
+    void reservingUnknownStockKeepsItUnlimited() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, null));
+
+        product.reserve(3);
+
+        assertThat(product.getStock()).isNull();
+    }
+
+    @Test
+    void reservingMoreThanAvailableFailsWithoutChangingStock() {
+        Product product = Product.openNew(OWNER, new ProductDetails("Zapatillas", null, PRICE, Currency.ARS, 2));
+
+        assertThatThrownBy(() -> product.reserve(3)).isInstanceOf(IllegalStateException.class);
+        assertThat(product.getStock()).isEqualTo(2);
+    }
 }
