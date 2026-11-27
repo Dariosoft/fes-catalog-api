@@ -135,6 +135,22 @@ Examples:
 
 Do not mix broker payloads with domain events if they have different responsibilities.
 
+## `messaging/rabbit/` subfolders
+
+When `messaging/rabbit/` grows beyond a single adapter, split it by responsibility:
+
+- `model/`: broker payload records, including nested message items.
+- `listener/`: `@RabbitListener` consumers.
+- `reader/`: tolerant readers or parsers for broker payloads.
+- `codec/`: encoders or decoders for a specific broker payload when serialization is a separate responsibility.
+- `publisher/`: publishers and dead-letter publishers.
+- Keep shared, cross-cutting retry helpers (for example `RetryAttempts`) at the
+  `messaging/rabbit/` root.
+- Mirror the same subfolders in tests.
+
+Do not leave payloads, listeners, readers and publishers flat in `messaging/rabbit/`
+when the package contains more than one adapter responsibility.
+
 # `mapper/`
 
 Use `mapper/` when there are repeated conversions between models, DTOs, entities, or external payloads.
@@ -242,7 +258,13 @@ Before creating or moving a class, answer:
 - Does it talk to an API, SDK, provider, or external protocol? `client/<provider-or-protocol>/`.
 - Does it build or parse HTTP artifacts such as cookies, headers, filters, or problem details? `http/<artifact>/`.
 - Does it represent authentication, authorization, tokens, password, or a principal? `auth/` or `security/`.
-- Does it publish or consume messages/events from a broker? `messaging/`.
+- Does it publish or consume messages/events from a broker? `messaging/` (follow the `messaging/rabbit/` subfolder rules above).
+- Is it a broker payload? `messaging/rabbit/model/`.
+- Does it consume a queue? `messaging/rabbit/listener/`.
+- Does it parse a broker payload? `messaging/rabbit/reader/`.
+- Does it encode or decode a broker payload? `messaging/rabbit/codec/`.
+- Does it publish to an exchange or queue? `messaging/rabbit/publisher/`.
+- Is it a shared retry helper used by broker adapters? `messaging/rabbit/` root.
 - Does it represent an application-owned event? `event/`.
 - Does it repeatedly convert between representations? `mapper/`.
 - Does it validate a reusable rule? `validation/`.

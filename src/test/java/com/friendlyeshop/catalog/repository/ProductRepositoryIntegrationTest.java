@@ -7,11 +7,17 @@ import com.friendlyeshop.catalog.model.dto.in.ProductDetails;
 import com.friendlyeshop.catalog.model.enums.Currency;
 import com.friendlyeshop.catalog.model.Product;
 import com.friendlyeshop.catalog.model.ProductImage;
+import com.friendlyeshop.catalog.model.StockReservation;
 import com.friendlyeshop.catalog.model.enums.ProductStage;
+import com.friendlyeshop.catalog.model.enums.RejectionReason;
+import com.friendlyeshop.catalog.model.enums.ReservationStatus;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -44,6 +50,9 @@ class ProductRepositoryIntegrationTest {
 
     @Autowired
     private ProductImageRepository productImageRepository;
+
+    @Autowired
+    private StockReservationRepository stockReservationRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -339,6 +348,101 @@ class ProductRepositoryIntegrationTest {
         assertThat(productRepository.findPublicById(ownerless.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
         assertThat(productRepository.findPublicById(zeroStock.getId(), ProductStage.PUBLISHED, 0)).isEmpty();
         assertThat(productRepository.findPublicById(UUID.randomUUID(), ProductStage.PUBLISHED, 0)).isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void migrationCreatesStockReservationsTableWithExpectedColumns() {
+        List<Object[]> columns = entityManager.createNativeQuery("""
+                select column_name, is_nullable
+                from information_schema.columns
+                where table_name = 'stock_reservations'
+                """).getResultList();
+        Map<String, String> nullability = new HashMap<>();
+        columns.forEach(column -> nullability.put((String) column[0], (String) column[1]));
+
+        assertThat(nullability).containsKeys("order_id", "event_id", "status", "reason",
+                "reserved_at", "rejected_at", "created_at", "updated_at");
+        assertThat(nullability.get("order_id")).isEqualTo("NO");
+        assertThat(nullability.get("status")).isEqualTo("NO");
+        assertThat(nullability.get("event_id")).isEqualTo("YES");
+        assertThat(nullability.get("reason")).isEqualTo("YES");
+    }
+
+    @Test
+    void persistsAndFindsReservedStockReservation() {
+        UUID orderId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        Instant reservedAt = Instant.parse("2026-11-25T12:00:00Z");
+        stockReservationRepository.saveAndFlush(StockReservation.reserved(eventId, orderId, reservedAt));
+        entityManager.clear();
+
+        StockReservation reloaded = stockReservationRepository.findById(orderId).orElseThrow();
+
+        assertThat(reloaded.getStatus()).isEqualTo(ReservationStatus.RESERVED);
+        assertThat(reloaded.getEventId()).isEqualTo(eventId);
+        assertThat(reloaded.getReason()).isNull();
+        assertThat(reloaded.getReservedAt()).isEqualTo(reservedAt);
+        assertThat(reloaded.getRejectedAt()).isNull();
+    }
+
+    @Test
+    void persistsAndFindsRejectedStockReservation() {
+        UUID orderId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        Instant rejectedAt = Instant.parse("2026-11-25T12:00:00Z");
+        stockReservationRepository.saveAndFlush(
+                StockReservation.rejected(eventId, orderId, RejectionReason.OUT_OF_STOCK, rejectedAt));
+        entityManager.clear();
+
+        StockReservation reloaded = stockReservationRepository.findById(orderId).orElseThrow();
+
+        assertThat(reloaded.getStatus()).isEqualTo(ReservationStatus.REJECTED);
+        assertThat(reloaded.getReason()).isEqualTo(RejectionReason.OUT_OF_STOCK);
+        assertThat(reloaded.getRejectedAt()).isEqualTo(rejectedAt);
+        assertThat(reloaded.getReservedAt()).isNull();
+    }
+
+    @Test
+    void rejectsTwoReservationsForTheSameOrder() {
+        UUID orderId = UUID.randomUUID();
+        stockReservationRepository.saveAndFlush(
+                StockReservation.reserved(UUID.randomUUID(), orderId, Instant.now()));
+        entityManager.clear();
+
+        assertThatThrownBy(() -> stockReservationRepository.saveAndFlush(
+                StockReservation.reserved(UUID.randomUUID(), orderId, Instant.now())))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void rejectsReservedReservationWithReasonAtDatabaseLevel() {
+        assertThatThrownBy(() -> entityManager.createNativeQuery("""
+                insert into stock_reservations (order_id, status, reason, reserved_at)
+                values (:orderId, 'RESERVED', 'OUT_OF_STOCK', NOW())
+                """).setParameter("orderId", UUID.randomUUID()).executeUpdate())
+                .isInstanceOf(PersistenceException.class);
+    }
+
+    @Test
+    void rejectsRejectedReservationWithoutReasonAtDatabaseLevel() {
+        assertThatThrownBy(() -> entityManager.createNativeQuery("""
+                insert into stock_reservations (order_id, status, rejected_at)
+                values (:orderId, 'REJECTED', NOW())
+                """).setParameter("orderId", UUID.randomUUID()).executeUpdate())
+                .isInstanceOf(PersistenceException.class);
+    }
+
+    @Test
+    void findByIdForUpdateReturnsTheProductInsideATransaction() {
+        Product product = publishedProduct(UUID.randomUUID(), "Bloqueado", 4);
+        productRepository.saveAndFlush(product);
+        entityManager.clear();
+
+        Product locked = productRepository.findByIdForUpdate(product.getId()).orElseThrow();
+
+        assertThat(locked.getName()).isEqualTo("Bloqueado");
+        assertThat(locked.getStock()).isEqualTo(4);
     }
 
     private static Product publishedProductWithDescription(UUID owner, String name, Integer stock,
